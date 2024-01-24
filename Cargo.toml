@@ -3,10 +3,11 @@ name = "esc-rs"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib"]
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-either="1"
 swc_core={ version = "0.88.3", features = ["ecma_quote", "ecma_plugin_transform", "ecma_transforms_compat", "ecma_preset_env"] }
 swc_ecma_visit = "0.97.0"
 swc_ecma_parser = "0.142.0"
@@ -15,3 +16,12 @@ swc_error_reporters = { version = "0.17.12" }
 preset_env_base="0.4.10"
 swc_ecma_preset_env="0.205.1"
 anyhow="1.0.79"
+napi = { version = "2.12.2", default-features = false, features = ["napi4"] }
+napi-derive = "2.12.2"
+
+[build-dependencies]
+napi-build = "2.0.1"
+
+[profile.release]
+lto = true
+strip = "symbols"
