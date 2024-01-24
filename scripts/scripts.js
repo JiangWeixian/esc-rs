@@ -6,7 +6,7 @@ const main = async () => {
   const result = detect({
     browserslist: 'Chrome > 63',
     filename,
-    code: code.toString('utf-8')
+    code: code.toString('utf-8'),
   })
   console.log('js result', result)
 }

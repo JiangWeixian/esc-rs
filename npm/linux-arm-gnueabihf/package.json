@@ -1,21 +1,13 @@
 {
   "name": "esc-rs-linux-arm-gnueabihf",
   "version": "0.0.0",
-  "os": [
-    "linux"
-  ],
-  "cpu": [
-    "arm64"
-  ],
-  "main": "esc-rs.linux-arm-gnueabihf.node",
-  "files": [
-    "esc-rs.linux-arm-gnueabihf.node"
-  ],
+  "os": ["linux"],
+  "cpu": ["arm64"],
   "license": "MIT",
   "engines": {
     "node": ">= 10"
   },
-  "libc": [
-    "glibc"
-  ]
+  "files": ["esc-rs.linux-arm-gnueabihf.node"],
+  "main": "esc-rs.linux-arm-gnueabihf.node",
+  "libc": ["glibc"]
 }

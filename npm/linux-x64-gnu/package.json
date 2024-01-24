@@ -1,21 +1,13 @@
 {
   "name": "esc-rs-linux-x64-gnu",
   "version": "0.0.0",
-  "os": [
-    "linux"
-  ],
-  "cpu": [
-    "x64"
-  ],
-  "main": "esc-rs.linux-x64-gnu.node",
-  "files": [
-    "esc-rs.linux-x64-gnu.node"
-  ],
+  "os": ["linux"],
+  "cpu": ["x64"],
   "license": "MIT",
   "engines": {
     "node": ">= 10"
   },
-  "libc": [
-    "glibc"
-  ]
+  "files": ["esc-rs.linux-x64-gnu.node"],
+  "main": "esc-rs.linux-x64-gnu.node",
+  "libc": ["glibc"]
 }

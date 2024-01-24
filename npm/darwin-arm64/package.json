@@ -1,18 +1,12 @@
 {
   "name": "esc-rs-darwin-arm64",
   "version": "0.0.0",
-  "os": [
-    "darwin"
-  ],
-  "cpu": [
-    "arm64"
-  ],
-  "main": "esc-rs.darwin-arm64.node",
-  "files": [
-    "esc-rs.darwin-arm64.node"
-  ],
+  "os": ["darwin"],
+  "cpu": ["arm64"],
   "license": "MIT",
   "engines": {
     "node": ">= 10"
-  }
+  },
+  "files": ["esc-rs.darwin-arm64.node"],
+  "main": "esc-rs.darwin-arm64.node"
 }
