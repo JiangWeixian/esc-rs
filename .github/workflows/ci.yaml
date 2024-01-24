@@ -275,6 +275,9 @@ jobs:
           image: node:lts-alpine
           options: "--platform linux/arm64 -v ${{ github.workspace }}:/build -w /build"
           run: |
+            set -e
+            apk add nodejs npm
+            apk add --no-cache bash
             npm i -g pnpm@8
             pnpm i
             pnpm test
