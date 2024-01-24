@@ -81,7 +81,7 @@ jobs:
               pnpm build --target aarch64-unknown-linux-musl
               /aarch64-linux-musl-cross/bin/aarch64-linux-musl-strip *.node
 
-    name: stable - ${{ matrix.settings.target }} - node@16
+    name: stable - ${{ matrix.settings.target }} - node@18
     runs-on: ${{ matrix.settings.host }}
 
     steps:
@@ -96,7 +96,7 @@ jobs:
       - name: Setup node x64
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
           check-latest: true
           cache: pnpm
           architecture: x64
@@ -122,12 +122,12 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cargo/registry
-          key: ${{ matrix.settings.target }}-node@16-cargo-registry-trimmed
+          key: ${{ matrix.settings.target }}-node@18-cargo-registry-trimmed
       - name: Cache cargo index
         uses: actions/cache@v3
         with:
           path: ~/.cargo/git
-          key: ${{ matrix.settings.target }}-node@16-cargo-index-trimmed
+          key: ${{ matrix.settings.target }}-node@18-cargo-index-trimmed
 
       - name: Setup toolchain
         run: ${{ matrix.settings.setup }}
@@ -167,7 +167,7 @@ jobs:
             target: x86_64-apple-darwin
           - host: windows-latest
             target: x86_64-pc-windows-msvc
-        node: ["16"]
+        node: ["18"]
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v3
@@ -200,7 +200,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ["16"]
+        node: ["18"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -226,7 +226,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ["16"]
+        node: ["18"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -252,7 +252,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ["16"]
+        node: ["18"]
     runs-on: ubuntu-latest
     steps:
       - run: docker run --rm --privileged multiarch/qemu-user-static:register --reset
@@ -272,11 +272,10 @@ jobs:
       - name: Setup and run tests
         uses: addnab/docker-run-action@v3
         with:
-          image: multiarch/alpine:aarch64-latest-stable
-          options: "-v ${{ github.workspace }}:/build -w /build"
+          image: node:lts-alpine
+          options: "--platform linux/arm64 -v ${{ github.workspace }}:/build -w /build"
           run: |
             set -e
-            apk add nodejs npm
             npm i -g pnpm@8
             pnpm i
             pnpm test
