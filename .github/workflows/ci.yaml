@@ -6,12 +6,17 @@ env:
   MACOSX_DEPLOYMENT_TARGET: "10.13"
 
 on:
-  workflow_dispatch:
-    inputs:
-      publish:
-        description: Need publish ?
-        required: true
-        type: boolean
+  push:
+    branches:
+      - master
+    tags-ignore:
+      - "**"
+    paths-ignore:
+      - LICENSE
+      - "**/*.gitignore"
+      - .editorconfig
+      - docs/**
+  pull_request: null
 
 jobs:
   build:
@@ -212,7 +217,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: docker run --rm -v $(pwd):/${{ env.APP_NAME }} -w /${{ env.APP_NAME }} node:${{ matrix.node }}-slim sh -c "npm i -g pnpm@7 && pnpm i && pnpm test"
+        run: docker run --rm -v $(pwd):/${{ env.APP_NAME }} -w /${{ env.APP_NAME }} node:${{ matrix.node }}-slim sh -c "npm i -g pnpm@8 && pnpm i && pnpm test"
 
   test-linux-x64-musl-binding:
     name: Test bindings on x86_64-unknown-linux-musl - node@${{ matrix.node }}
@@ -238,7 +243,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: docker run --rm -v $(pwd):/${{ env.APP_NAME }} -w /${{ env.APP_NAME }} node:${{ matrix.node }}-alpine sh -c "npm i -g pnpm@7 && pnpm i && pnpm test"
+        run: docker run --rm -v $(pwd):/${{ env.APP_NAME }} -w /${{ env.APP_NAME }} node:${{ matrix.node }}-alpine sh -c "npm i -g pnpm@8 && pnpm i && pnpm test"
 
   test-linux-aarch64-musl-binding:
     name: Test bindings on aarch64-unknown-linux-musl - node@${{ matrix.node }}
@@ -272,7 +277,7 @@ jobs:
           run: |
             set -e
             apk add nodejs npm
-            npm i -g pnpm@7
+            npm i -g pnpm@8
             pnpm i
             pnpm test
 
@@ -307,14 +312,13 @@ jobs:
           options: "-v ${{ github.workspace }}:/build -w /build"
           run: |
             set -e
-            npm i -g pnpm@7
+            npm i -g pnpm@8
             pnpm i
             pnpm test
             ls -la
 
   publish:
     name: Publish
-    if: ${{ inputs.publish }}
     runs-on: ubuntu-latest
     needs:
       - build
@@ -336,10 +340,23 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
 
-      - name: Install deps
-        run: pnpm i
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - name: Install
+        run: |
+          pnpm install --frozen-lockfile=false
 
       - name: Download all artifacts
         uses: actions/download-artifact@v3
@@ -357,8 +374,13 @@ jobs:
         run: ls -R ./npm
         shell: bash
 
-      - name: Publish pakcages
-        run: pnpm release
+      - name: create and publish versions
+        uses: changesets/action@v1
+        with:
+          version: pnpm ci:version
+          commit: "chore: update versions"
+          title: "chore: update versions"
+          publish: pnpm ci:publish
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

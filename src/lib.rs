@@ -98,7 +98,6 @@ pub fn detect(options: ParseOptions) -> Result<DetectResult, napi::Error> {
   let fm = cm.new_source_file(FileName::Custom(filename.into()), code.clone().into());
 
   let env_targets: Targets = Targets::Query(Query::Single(browserslist));
-  println!("browserslist {:?}", env_targets);
   let es_version = parse_target(target);
 
   try_with(cm.clone(), false, |handler| {

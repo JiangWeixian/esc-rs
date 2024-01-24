@@ -17,12 +17,17 @@
     "email": "jiangweixian1994@gmail.com",
     "url": "https://twitter.com/jiangweixian"
   },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "CHANGELOG.md"
+  ],
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {
     "name": "esc-rs",
     "triples": {
-      "defaults": false,
+      "defaults": true,
       "additional": [
         "x86_64-apple-darwin",
         "aarch64-apple-darwin",
@@ -40,6 +45,7 @@
     "artifacts": "napi artifacts",
     "build": "napi build --platform --release",
     "prepare": "husky install",
+    "prepublishOnly": "napi prepublish -t npm",
     "ci:publish": "pnpm run build && pnpm changeset publish",
     "ci:version": "pnpm changeset version",
     "ci:snapshot": "pnpm changeset version --snapshot snapshot",
