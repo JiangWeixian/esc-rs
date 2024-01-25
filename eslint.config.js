@@ -1,3 +1,7 @@
 const { aiou } = require('@aiou/eslint-config')
 
-module.exports = aiou({ ssr: false })
+module.exports = aiou({ ssr: false }, [
+  {
+    ignores: ['index.js'],
+  },
+])

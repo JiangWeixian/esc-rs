@@ -37,7 +37,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./esc-rs.android-arm64.node')
           } else {
-            nativeBinding = require('esc-rs-android-arm64')
+            nativeBinding = require('@ruaaa/esc-rs-android-arm64')
           }
         } catch (e) {
           loadError = e
@@ -49,7 +49,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./esc-rs.android-arm-eabi.node')
           } else {
-            nativeBinding = require('esc-rs-android-arm-eabi')
+            nativeBinding = require('@ruaaa/esc-rs-android-arm-eabi')
           }
         } catch (e) {
           loadError = e
@@ -69,7 +69,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./esc-rs.win32-x64-msvc.node')
           } else {
-            nativeBinding = require('esc-rs-win32-x64-msvc')
+            nativeBinding = require('@ruaaa/esc-rs-win32-x64-msvc')
           }
         } catch (e) {
           loadError = e
@@ -83,7 +83,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./esc-rs.win32-ia32-msvc.node')
           } else {
-            nativeBinding = require('esc-rs-win32-ia32-msvc')
+            nativeBinding = require('@ruaaa/esc-rs-win32-ia32-msvc')
           }
         } catch (e) {
           loadError = e
@@ -97,7 +97,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./esc-rs.win32-arm64-msvc.node')
           } else {
-            nativeBinding = require('esc-rs-win32-arm64-msvc')
+            nativeBinding = require('@ruaaa/esc-rs-win32-arm64-msvc')
           }
         } catch (e) {
           loadError = e
@@ -113,7 +113,7 @@ switch (platform) {
       if (localFileExisted) {
         nativeBinding = require('./esc-rs.darwin-universal.node')
       } else {
-        nativeBinding = require('esc-rs-darwin-universal')
+        nativeBinding = require('@ruaaa/esc-rs-darwin-universal')
       }
       break
     } catch {}
@@ -124,7 +124,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./esc-rs.darwin-x64.node')
           } else {
-            nativeBinding = require('esc-rs-darwin-x64')
+            nativeBinding = require('@ruaaa/esc-rs-darwin-x64')
           }
         } catch (e) {
           loadError = e
@@ -138,7 +138,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./esc-rs.darwin-arm64.node')
           } else {
-            nativeBinding = require('esc-rs-darwin-arm64')
+            nativeBinding = require('@ruaaa/esc-rs-darwin-arm64')
           }
         } catch (e) {
           loadError = e
@@ -157,7 +157,7 @@ switch (platform) {
       if (localFileExisted) {
         nativeBinding = require('./esc-rs.freebsd-x64.node')
       } else {
-        nativeBinding = require('esc-rs-freebsd-x64')
+        nativeBinding = require('@ruaaa/esc-rs-freebsd-x64')
       }
     } catch (e) {
       loadError = e
@@ -174,7 +174,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./esc-rs.linux-x64-musl.node')
             } else {
-              nativeBinding = require('esc-rs-linux-x64-musl')
+              nativeBinding = require('@ruaaa/esc-rs-linux-x64-musl')
             }
           } catch (e) {
             loadError = e
@@ -187,7 +187,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./esc-rs.linux-x64-gnu.node')
             } else {
-              nativeBinding = require('esc-rs-linux-x64-gnu')
+              nativeBinding = require('@ruaaa/esc-rs-linux-x64-gnu')
             }
           } catch (e) {
             loadError = e
@@ -203,7 +203,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./esc-rs.linux-arm64-musl.node')
             } else {
-              nativeBinding = require('esc-rs-linux-arm64-musl')
+              nativeBinding = require('@ruaaa/esc-rs-linux-arm64-musl')
             }
           } catch (e) {
             loadError = e
@@ -216,7 +216,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./esc-rs.linux-arm64-gnu.node')
             } else {
-              nativeBinding = require('esc-rs-linux-arm64-gnu')
+              nativeBinding = require('@ruaaa/esc-rs-linux-arm64-gnu')
             }
           } catch (e) {
             loadError = e
@@ -231,7 +231,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./esc-rs.linux-arm-gnueabihf.node')
           } else {
-            nativeBinding = require('esc-rs-linux-arm-gnueabihf')
+            nativeBinding = require('@ruaaa/esc-rs-linux-arm-gnueabihf')
           }
         } catch (e) {
           loadError = e
@@ -246,7 +246,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./esc-rs.linux-riscv64-musl.node')
             } else {
-              nativeBinding = require('esc-rs-linux-riscv64-musl')
+              nativeBinding = require('@ruaaa/esc-rs-linux-riscv64-musl')
             }
           } catch (e) {
             loadError = e
@@ -259,7 +259,7 @@ switch (platform) {
             if (localFileExisted) {
               nativeBinding = require('./esc-rs.linux-riscv64-gnu.node')
             } else {
-              nativeBinding = require('esc-rs-linux-riscv64-gnu')
+              nativeBinding = require('@ruaaa/esc-rs-linux-riscv64-gnu')
             }
           } catch (e) {
             loadError = e
@@ -274,7 +274,7 @@ switch (platform) {
           if (localFileExisted) {
             nativeBinding = require('./esc-rs.linux-s390x-gnu.node')
           } else {
-            nativeBinding = require('esc-rs-linux-s390x-gnu')
+            nativeBinding = require('@ruaaa/esc-rs-linux-s390x-gnu')
           }
         } catch (e) {
           loadError = e
