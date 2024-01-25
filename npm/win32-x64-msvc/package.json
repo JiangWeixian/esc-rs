@@ -1,6 +1,6 @@
 {
   "name": "@ruaaa/esc-rs-win32-x64-msvc",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "os": ["win32"],
   "cpu": ["x64"],
   "license": "MIT",
