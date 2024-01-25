@@ -47,7 +47,6 @@
     "artifacts": "napi artifacts",
     "build": "napi build --platform --release",
     "prepare": "husky install",
-    "prepublishOnly": "napi prepublish -t npm",
     "ci:publish": "pnpm changeset publish",
     "ci:version": "pnpm changeset version",
     "ci:snapshot": "pnpm changeset version --snapshot snapshot",
@@ -57,6 +56,16 @@
   },
   "lint-staged": {
     "**/**/*.{js,ts,tsx,json,yml,yaml,md}": ["eslint --fix"]
+  },
+  "optionalDependencies": {
+    "@ruaaa/esc-rs-darwin-arm64": "workspace:*",
+    "@ruaaa/esc-rs-darwin-x64": "workspace:*",
+    "@ruaaa/esc-rs-linux-arm64-gnu": "workspace:*",
+    "@ruaaa/esc-rs-linux-arm64-musl": "workspace:*",
+    "@ruaaa/esc-rs-linux-x64-gnu": "workspace:*",
+    "@ruaaa/esc-rs-linux-x64-musl": "workspace:*",
+    "@ruaaa/esc-rs-win32-arm64-msvc": "workspace:*",
+    "@ruaaa/esc-rs-win32-x64-msvc": "workspace:*"
   },
   "devDependencies": {
     "@aiou/eslint-config": "1.2.1",

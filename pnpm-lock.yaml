@@ -7,6 +7,31 @@ settings:
 importers:
 
   .:
+    optionalDependencies:
+      '@ruaaa/esc-rs-darwin-arm64':
+        specifier: workspace:*
+        version: link:npm/darwin-arm64
+      '@ruaaa/esc-rs-darwin-x64':
+        specifier: workspace:*
+        version: link:npm/darwin-x64
+      '@ruaaa/esc-rs-linux-arm64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-gnu
+      '@ruaaa/esc-rs-linux-arm64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-musl
+      '@ruaaa/esc-rs-linux-x64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-x64-gnu
+      '@ruaaa/esc-rs-linux-x64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-x64-musl
+      '@ruaaa/esc-rs-win32-arm64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-arm64-msvc
+      '@ruaaa/esc-rs-win32-x64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-x64-msvc
     devDependencies:
       '@aiou/eslint-config':
         specifier: 1.2.1
