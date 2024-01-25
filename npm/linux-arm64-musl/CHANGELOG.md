@@ -1,5 +1,11 @@
 # esc-rs-linux-arm64-musl
 
+## 0.1.3
+
+### Patch Changes
+
+- a401292: disable napi publish
+
 ## 0.1.2
 
 ### Patch Changes
