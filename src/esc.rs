@@ -27,8 +27,12 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
     flags: FeaturesFlag {
       ClassStaticBlock: should_enable!(ClassStaticBlock, false) || es_version || EsVersion::Es2022,
       PrivateMethods: should_enable!(PrivateMethods, false) || es_version || EsVersion::Es2022,
-      LogicalAssignmentOperators: should_enable!(ClassProperties, false) || es_version || EsVersion::Es2021,
-      LogicalAssignmentOperators: should_enable!(LogicalAssignmentOperators, false) || es_version || EsVersion::Es2021,
+      LogicalAssignmentOperators: should_enable!(ClassProperties, false)
+        || es_version
+        || EsVersion::Es2021,
+      LogicalAssignmentOperators: should_enable!(LogicalAssignmentOperators, false)
+        || es_version
+        || EsVersion::Es2021,
       nullish_coalescing: should_enable!(NullishCoalescing, false)
         || es_version < EsVersion::Es2020,
       optional_chaining: should_enable!(OptionalChaining, false) || es_version < EsVersion::Es2020,
@@ -36,7 +40,8 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
         || es_version < EsVersion::Es2019,
       object_rest_spread: should_enable!(ObjectRestSpread, false) || es_version < EsVersion::Es2018,
       AsyncToGenerator: should_enable!(AsyncToGenerator, false) || es_version < EsVersion::Es2017,
-      ExponentiationOperator: should_enable!(ExponentiationOperator, false) || es_version < EsVersion::Es2016,
+      ExponentiationOperator: should_enable!(ExponentiationOperator, false)
+        || es_version < EsVersion::Es2016,
     },
     ..Default::default()
   }
@@ -67,9 +72,9 @@ impl VisitMut for ESC {
   noop_visit_mut_type!();
 
   // static
-  fn visit_mut_static_block(&mut self,n: &mut StaticBlock) {
+  fn visit_mut_static_block(&mut self, n: &mut StaticBlock) {
     if !self.flags.ClassStaticBlock {
-      return
+      return;
     }
     self.es_versions.insert(EsVersion::Es2022, true);
     self.features.ClassStaticBlock = true;
@@ -77,18 +82,18 @@ impl VisitMut for ESC {
   }
 
   // #private
-  fn visit_mut_private_method(&mut self,n: &mut PrivateMethod) {
+  fn visit_mut_private_method(&mut self, n: &mut PrivateMethod) {
     if !self.flags.PrivateMethods {
-      return
+      return;
     }
     self.es_versions.insert(EsVersion::Es2022, true);
     self.features.PrivateMethods = true;
     self.visit_mut_children_with(self);
   }
 
-  fn visit_mut_private_prop(&mut self,n: &mut PrivateProp) {
+  fn visit_mut_private_prop(&mut self, n: &mut PrivateProp) {
     if !self.flags.PrivateMethods {
-      return
+      return;
     }
     self.es_versions.insert(EsVersion::Es2022, true);
     self.features.PrivateMethods = true;
@@ -96,9 +101,9 @@ impl VisitMut for ESC {
   }
 
   // async function a() {}
-  fn visit_mut_function(&mut self,n: &mut Function) {
+  fn visit_mut_function(&mut self, n: &mut Function) {
     if !self.flags.AsyncToGenerator {
-      return
+      return;
     }
     if n.function.is_async {
       self.es_versions.insert(EsVersion::Es2017, true);
@@ -108,9 +113,9 @@ impl VisitMut for ESC {
   }
 
   // const b = async () => {}
-  fn visit_mut_arrow_expr(&mut self,n: &mut ArrowExpr) {
+  fn visit_mut_arrow_expr(&mut self, n: &mut ArrowExpr) {
     if !self.flags.AsyncToGenerator {
-      return
+      return;
     }
     if n.is_async {
       self.es_versions.insert(EsVersion::Es2017, true);
@@ -120,11 +125,11 @@ impl VisitMut for ESC {
   }
 
   // Class A {
-  //   async a() {} 
+  //   async a() {}
   // }
-  fn visit_mut_class_method(&mut self,n: &mut ClassMethod) {
+  fn visit_mut_class_method(&mut self, n: &mut ClassMethod) {
     if !self.flags.AsyncToGenerator {
-      return
+      return;
     }
     if n.is_async {
       self.es_versions.insert(EsVersion::Es2017, true);
@@ -134,31 +139,31 @@ impl VisitMut for ESC {
   }
 
   // ??= ||= &&=
-  fn visit_mut_assign_op(&mut self,n: &mut AssignOp) {
+  fn visit_mut_assign_op(&mut self, n: &mut AssignOp) {
     if !self.flags.LogicalAssignmentOperators || !self.flags.ExponentiationOperator {
-      return
+      return;
     }
     match n.op {
       // &&=
       AssignOp::AndAssign => {
         self.features.LogicalAssignmentOperators = true;
         self.es_versions.insert(EsVersion::Es2021, true);
-      },
+      }
       // ??=
       AssignOp::NullishAssign => {
         self.features.LogicalAssignmentOperators = true;
         self.es_versions.insert(EsVersion::Es2021, true);
-      },
+      }
       // ||=
       AssignOp::OrAssign => {
         self.features.LogicalAssignmentOperators = true;
         self.es_versions.insert(EsVersion::Es2021, true);
-      },
+      }
       AssignOp::ExpAssign => {
         self.features.ExponentiationOperator = true;
         self.es_versions.insert(EsVersion::Es2016, true);
-      },
-      _ => None
+      }
+      _ => None,
     }
   }
 
@@ -172,13 +177,13 @@ impl VisitMut for ESC {
       BinaryOp::NullishCoalescing => {
         self.features.nullish_coalescing = true;
         self.es_versions.insert(EsVersion::Es2020, true);
-      },
+      }
       // **
       BinaryOp::Exp => {
         self.features.ExponentiationOperator = true;
         self.es_versions.insert(EsVersion::Es2016, true);
-      },
-      _ => None
+      }
+      _ => None,
     }
   }
 
