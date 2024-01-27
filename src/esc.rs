@@ -25,14 +25,12 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
   }
   ESC {
     flags: FeaturesFlag {
-      ClassStaticBlock: should_enable!(ClassStaticBlock, false) || es_version || EsVersion::Es2022,
-      PrivateMethods: should_enable!(PrivateMethods, false) || es_version || EsVersion::Es2022,
+      ClassStaticBlock: should_enable!(ClassStaticBlock, false) || es_version < EsVersion::Es2022,
+      PrivateMethods: should_enable!(PrivateMethods, false) || es_version < EsVersion::Es2022,
       LogicalAssignmentOperators: should_enable!(ClassProperties, false)
-        || es_version
-        || EsVersion::Es2021,
+        || es_version < EsVersion::Es2021,
       LogicalAssignmentOperators: should_enable!(LogicalAssignmentOperators, false)
-        || es_version
-        || EsVersion::Es2021,
+        || es_version < EsVersion::Es2021,
       nullish_coalescing: should_enable!(NullishCoalescing, false)
         || es_version < EsVersion::Es2020,
       optional_chaining: should_enable!(OptionalChaining, false) || es_version < EsVersion::Es2020,
