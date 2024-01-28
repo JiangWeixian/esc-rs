@@ -27,7 +27,16 @@ const glob = async (cwd: string, feature: string, shouldFound = true) => {
     expect(result.features[feature]).toBe(shouldFound)
   }
 }
-const spread = path.join(fixtures, './spread')
+const single = async (filename: string, feature: string, shouldFound = true) => {
+  const code = (await fs.readFile(filename)).toString('utf-8')
+  const result = detect({
+    filename,
+    code,
+    browserslist: 'IE 11',
+  })
+  expect(result.features[feature]).toBe(shouldFound)
+}
+const spread = path.join(fixtures, './spread/should')
 
 describe('es2022', () => {
   const classStaticBlock = path.join(fixtures, './ClassStaticBlock')
@@ -121,11 +130,13 @@ describe('es2019', () => {
 
 describe('es2018', () => {
   const objectRestSpread = path.join(fixtures, './ObjectRestSpread')
-  it('objectRestSpread', async () => {
-    await glob(objectRestSpread, 'objectRestSpread')
-  })
-  it('not objectRestSpread', async () => {
-    await glob(spread, 'objectRestSpread', false)
+  describe('objectRestSpread', () => {
+    it('should', async () => {
+      await glob(objectRestSpread, 'objectRestSpread')
+    })
+    it('should not', async () => {
+      await glob(spread, 'objectRestSpread', false)
+    })
   })
 })
 
@@ -144,7 +155,23 @@ describe('es2016', () => {
 })
 
 describe('es2015', () => {
-  it('spread', async () => {
-    await glob(spread, 'spread')
+  const notSpread = path.join(fixtures, './spread/should-not')
+  const destructuring = path.join(fixtures, './Destructuring/should')
+  const notDestructuring = path.join(fixtures, './Destructuring/should-not')
+  describe('spread', () => {
+    it('should', async () => {
+      await glob(spread, 'spread')
+    })
+    it('should not', async () => {
+      await glob(notSpread, 'spread', false)
+    })
+  })
+  describe('destructuring', () => {
+    it('should', async () => {
+      await glob(destructuring, 'destructuring')
+    })
+    it('should not', async () => {
+      await glob(notDestructuring, 'destructuring', false)
+    })
   })
 })

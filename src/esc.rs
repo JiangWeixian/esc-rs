@@ -4,7 +4,9 @@ use preset_env_base::query::targets_to_versions;
 use preset_env_base::version::should_enable;
 use swc_core::ecma::ast::EsVersion;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::visit::{noop_visit_mut_type, noop_visit_type, Visit, VisitWith, VisitMut, VisitMutWith};
+use swc_core::ecma::visit::{
+  noop_visit_mut_type, noop_visit_type, Visit, VisitMut, VisitMutWith, VisitWith,
+};
 use swc_ecma_preset_env::{Config, Feature, FeatureOrModule, Versions};
 
 pub fn compat(es_version: EsVersion, c: Config) -> ESC {
@@ -40,15 +42,21 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       exponentiation_operator: should_enable!(ExponentiationOperator, false)
         || es_version < EsVersion::Es2016,
       // alias es6
+      // TODO: test
       block_scoping: should_enable!(BlockScoping, false) || es_version < EsVersion::Es2015,
+      // TODO: test
       arrow_functions: should_enable!(ArrowFunctions, false) || es_version < EsVersion::Es2015,
+      // TODO: test
       parameters: should_enable!(Parameters, false) || es_version < EsVersion::Es2015,
-      // TODO: confuse with object_rest_spread
       spread: should_enable!(Spread, false) || es_version < EsVersion::Es2015,
+      // TODO: test
       template_literals: should_enable!(TemplateLiterals, false) || es_version < EsVersion::Es2015,
+      // TODO: test
       sticky_regex: should_enable!(StickyRegex, false) || es_version < EsVersion::Es2015,
+      // TODO: test
       shorthand_properties: should_enable!(ShorthandProperties, false)
         || es_version < EsVersion::Es2015,
+      // TODO: test
       computed_properties: should_enable!(ClassProperties, false) || es_version < EsVersion::Es2015,
       destructuring: should_enable!(Destructuring, false) || es_version < EsVersion::Es2015,
     },
@@ -89,6 +97,11 @@ pub struct ESC {
 // https://github.com/sudheerj/ECMAScript-features
 impl VisitMut for ESC {
   noop_visit_mut_type!();
+
+  fn visit_mut_pats(&mut self, n: &mut Vec<Pat>) {
+    n.visit_mut_children_with(self);
+    println!("visit_mut_pats: {:?}", n);
+  }
 
   // const obj = { ["key"]: value }
   fn visit_mut_computed_prop_name(&mut self, n: &mut ComputedPropName) {
@@ -142,28 +155,6 @@ impl VisitMut for ESC {
     self.es_versions.insert(EsVersion::Es2015, true);
   }
 
-  // TODO: is same with visit rest pat?
-  fn visit_mut_pat(&mut self, n: &mut Pat) {
-    if !self.flags.parameters {
-      return;
-    }
-    match n {
-      // a = 1, ...args
-      Pat::Assign(_) => {
-        self.features.parameters = true;
-        self.es_versions.insert(EsVersion::Es2015, true);
-        return;
-      }
-      // ...args
-      Pat::Rest(_) => {
-        self.features.parameters = true;
-        self.es_versions.insert(EsVersion::Es2015, true);
-        return;
-      }
-      _ => (),
-    }
-  }
-
   // const let
   fn visit_mut_var_decl_kind(&mut self, n: &mut VarDeclKind) {
     if !self.flags.block_scoping {
@@ -213,11 +204,15 @@ impl VisitMut for ESC {
   // async function a() {}
   fn visit_mut_function(&mut self, n: &mut Function) {
     // function a({ x, ...rest }) {}
+    n.visit_mut_children_with(self);
+    if contains_destructuring(&n.params) && !contains_rest(&n.params) {
+      self.features.destructuring = true;
+      self.es_versions.insert(EsVersion::Es2015, true);
+    }
     if contains_rest(&n.params) && self.flags.object_rest_spread {
       self.features.object_rest_spread = true;
       self.es_versions.insert(EsVersion::Es2018, true);
     }
-    n.visit_mut_children_with(self);
     if !self.flags.async_to_generator {
       return;
     }
@@ -321,7 +316,11 @@ impl VisitMut for ESC {
     }
   }
   // const { a, ...rest } = { a: 1 }
-  fn visit_mut_var_declarators(&mut self,n: &mut Vec<VarDeclarator>) {
+  fn visit_mut_var_declarators(&mut self, n: &mut Vec<VarDeclarator>) {
+    if contains_destructuring(n) && !contains_rest(n) && self.flags.destructuring {
+      self.features.destructuring = true;
+      self.es_versions.insert(EsVersion::Es2015, true);
+    }
     if contains_rest(n) && self.flags.object_rest_spread {
       self.features.object_rest_spread = true;
       self.es_versions.insert(EsVersion::Es2018, true);
@@ -329,7 +328,6 @@ impl VisitMut for ESC {
     n.visit_mut_children_with(self);
   }
   // const b = { ...a }
-  // TODO: check is conflict with const b = [...a]
   fn visit_mut_spread_element(&mut self, _n: &mut SpreadElement) {
     println!("visit_mut_spread_element {:?}", _n);
     if !self.flags.object_rest_spread {
@@ -354,27 +352,53 @@ impl VisitMut for ESC {
   }
 }
 
+fn contains_destructuring<N>(node: &N) -> bool
+where
+  N: VisitWith<DestructuringVisitor>,
+{
+  let mut v = DestructuringVisitor { found: false };
+  node.visit_with(&mut v);
+  v.found
+}
+
+#[derive(Default)]
+struct DestructuringVisitor {
+  found: bool,
+}
+
+impl Visit for DestructuringVisitor {
+  noop_visit_type!();
+
+  fn visit_pat(&mut self, n: &Pat) {
+    n.visit_children_with(self);
+    match n {
+      Pat::Ident(..) => (),
+      _ => self.found = true,
+    }
+  }
+}
+
 fn contains_rest<N>(node: &N) -> bool
 where
-    N: VisitWith<RestVisitor>,
+  N: VisitWith<RestVisitor>,
 {
-    let mut v = RestVisitor { found: false };
-    node.visit_with(&mut v);
-    v.found
+  let mut v = RestVisitor { found: false };
+  node.visit_with(&mut v);
+  v.found
 }
 
 #[derive(Default)]
 struct RestVisitor {
-    found: bool,
+  found: bool,
 }
 
 impl Visit for RestVisitor {
   noop_visit_type!();
 
   fn visit_object_pat_prop(&mut self, prop: &ObjectPatProp) {
-      match *prop {
-          ObjectPatProp::Rest(..) => self.found = true,
-          _ => prop.visit_children_with(self),
-      }
+    match *prop {
+      ObjectPatProp::Rest(..) => self.found = true,
+      _ => prop.visit_children_with(self),
+    }
   }
 }
