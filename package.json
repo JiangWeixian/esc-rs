@@ -52,10 +52,12 @@
     "ci:snapshot": "pnpm changeset version --snapshot snapshot",
     "ci:prerelease": "pnpm run build && pnpm changeset publish --no-git-tag --snapshot",
     "lint:fix": "eslint . --fix",
-    "test": "echo test"
+    "test": "vitest"
   },
   "lint-staged": {
-    "**/**/*.{js,ts,tsx,json,yml,yaml,md}": ["eslint --fix"]
+    "**/**/*.{js,ts,tsx,json,yml,yaml,md}": [
+      "eslint --fix"
+    ]
   },
   "optionalDependencies": {
     "@ruaaa/esc-rs-darwin-arm64": "workspace:*",
@@ -74,8 +76,10 @@
     "@types/node": "^20.11.5",
     "cz-emoji": "^1.3.1",
     "eslint": "8.56.0",
+    "fast-glob": "^3.3.2",
     "husky": "8.0.3",
-    "lint-staged": "^11.2.6"
+    "lint-staged": "^11.2.6",
+    "vitest": "^1.2.1"
   },
   "config": {
     "commitizen": {
