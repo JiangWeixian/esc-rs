@@ -42,7 +42,6 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       exponentiation_operator: should_enable!(ExponentiationOperator, false)
         || es_version < EsVersion::Es2016,
       // alias es6
-      // TODO: test
       block_scoping: should_enable!(BlockScoping, false) || es_version < EsVersion::Es2015,
       arrow_functions: should_enable!(ArrowFunctions, false) || es_version < EsVersion::Es2015,
       parameters: should_enable!(Parameters, false) || es_version < EsVersion::Es2015,

@@ -191,4 +191,10 @@ describe('es2015', () => {
       await glob(yes, 'arrowFunctions')
     })
   })
+  describe('blockScoping', () => {
+    const yes = path.join(fixtures, './blockScoping/should')
+    it('should', async () => {
+      await glob(yes, 'blockScoping')
+    })
+  })
 })
