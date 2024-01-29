@@ -34,7 +34,6 @@ const single = async (filename: string, feature: string, shouldFound = true) => 
     code,
     browserslist: 'IE 11',
   })
-  console.log(result)
   expect(result.features[feature]).toBe(shouldFound)
 }
 const spread = path.join(fixtures, './spread/should')
@@ -192,9 +191,33 @@ describe('es2015', () => {
     })
   })
   describe('blockScoping', () => {
-    const yes = path.join(fixtures, './blockScoping/should')
+    const yes = path.join(fixtures, './BlockScoping/should')
     it('should', async () => {
       await glob(yes, 'blockScoping')
+    })
+  })
+  describe('templateLiterals', () => {
+    const yes = path.join(fixtures, './TemplateLiterals/should')
+    it('should', async () => {
+      await glob(yes, 'templateLiterals')
+    })
+  })
+  describe('shorthandProperties', () => {
+    const yes = path.join(fixtures, './ShorthandProperties/should')
+    it('should', async () => {
+      await glob(yes, 'shorthandProperties')
+    })
+  })
+  describe('computedProperties', () => {
+    const yes = path.join(fixtures, './ComputedProperties/should')
+    it('should', async () => {
+      await glob(yes, 'computedProperties')
+    })
+  })
+  describe('stickyRegex', () => {
+    const yes = path.join(fixtures, './StickyRegex/should')
+    it('should', async () => {
+      await glob(yes, 'stickyRegex')
     })
   })
 })

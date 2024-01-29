@@ -46,15 +46,11 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       arrow_functions: should_enable!(ArrowFunctions, false) || es_version < EsVersion::Es2015,
       parameters: should_enable!(Parameters, false) || es_version < EsVersion::Es2015,
       spread: should_enable!(Spread, false) || es_version < EsVersion::Es2015,
-      // TODO: test
       template_literals: should_enable!(TemplateLiterals, false) || es_version < EsVersion::Es2015,
-      // TODO: test
       sticky_regex: should_enable!(StickyRegex, false) || es_version < EsVersion::Es2015,
-      // TODO: test
       shorthand_properties: should_enable!(ShorthandProperties, false)
         || es_version < EsVersion::Es2015,
-      // TODO: test
-      computed_properties: should_enable!(ClassProperties, false) || es_version < EsVersion::Es2015,
+      computed_properties: should_enable!(ComputedProperties, false) || es_version < EsVersion::Es2015,
       destructuring: should_enable!(Destructuring, false) || es_version < EsVersion::Es2015,
     },
     ..Default::default()
@@ -119,8 +115,15 @@ impl VisitMut for ESC {
   fn visit_mut_prop(&mut self, n: &mut Prop) {
     n.visit_mut_children_with(self);
     match n {
-      Prop::Shorthand(_) => {
-        if (self.flags.shorthand_properties) {
+      Prop::Shorthand(..) => {
+        if self.flags.shorthand_properties {
+          self.es_versions.insert(EsVersion::Es2015, true);
+          self.features.shorthand_properties = true;
+        }
+        return;
+      }
+      Prop::Method(..) => {
+        if self.flags.shorthand_properties {
           self.es_versions.insert(EsVersion::Es2015, true);
           self.features.shorthand_properties = true;
         }
@@ -316,7 +319,6 @@ impl VisitMut for ESC {
   // GOOD: [...a, "foo"];
   //       foo(...a);
   fn visit_mut_expr_or_spread(&mut self, n: &mut ExprOrSpread) {
-    println!("visit_mut_expr_or_spread: {:?}", n);
     n.visit_mut_children_with(self);
     if n.spread.is_some() && self.flags.spread {
       self.features.spread = true;
