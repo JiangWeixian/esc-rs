@@ -34,6 +34,7 @@ const single = async (filename: string, feature: string, shouldFound = true) => 
     code,
     browserslist: 'IE 11',
   })
+  console.log(result)
   expect(result.features[feature]).toBe(shouldFound)
 }
 const spread = path.join(fixtures, './spread/should')
@@ -182,6 +183,12 @@ describe('es2015', () => {
     })
     it('should not', async () => {
       await glob(not, 'parameters', false)
+    })
+  })
+  describe('arrowFunctions', () => {
+    const yes = path.join(fixtures, './ArrowFunctions/should')
+    it('should', async () => {
+      await glob(yes, 'arrowFunctions')
     })
   })
 })

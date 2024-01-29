@@ -44,7 +44,6 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       // alias es6
       // TODO: test
       block_scoping: should_enable!(BlockScoping, false) || es_version < EsVersion::Es2015,
-      // TODO: test
       arrow_functions: should_enable!(ArrowFunctions, false) || es_version < EsVersion::Es2015,
       parameters: should_enable!(Parameters, false) || es_version < EsVersion::Es2015,
       spread: should_enable!(Spread, false) || es_version < EsVersion::Es2015,
@@ -97,11 +96,6 @@ pub struct ESC {
 impl VisitMut for ESC {
   noop_visit_mut_type!();
 
-  fn visit_mut_pats(&mut self, n: &mut Vec<Pat>) {
-    n.visit_mut_children_with(self);
-    println!("visit_mut_pats: {:?}", n);
-  }
-
   // const obj = { ["key"]: value }
   fn visit_mut_computed_prop_name(&mut self, n: &mut ComputedPropName) {
     if !self.flags.computed_properties {
@@ -120,16 +114,17 @@ impl VisitMut for ESC {
     self.features.class_properties = true;
   }
 
+  // Visit object prop
   // TODO: check `const obj = { a() {} }`
   // const obj = { a, b }
   fn visit_mut_prop(&mut self, n: &mut Prop) {
-    if !self.flags.shorthand_properties {
-      return;
-    }
+    n.visit_mut_children_with(self);
     match n {
       Prop::Shorthand(_) => {
-        self.es_versions.insert(EsVersion::Es2015, true);
-        self.features.shorthand_properties = true;
+        if (self.flags.shorthand_properties) {
+          self.es_versions.insert(EsVersion::Es2015, true);
+          self.features.shorthand_properties = true;
+        }
         return;
       }
       _ => (),
@@ -221,23 +216,20 @@ impl VisitMut for ESC {
             self.es_versions.insert(EsVersion::Es2015, true);
             self.features.parameters = true;
           }
-          return
-        },
+          return;
+        }
         // function (...args) {}
         Pat::Rest(..) => {
           if self.flags.parameters {
             self.es_versions.insert(EsVersion::Es2015, true);
             self.features.parameters = true;
           }
-          return
-        },
-        _ => ()
+          return;
+        }
+        _ => (),
       }
     }
-    if !self.flags.async_to_generator {
-      return;
-    }
-    if n.is_async {
+    if n.is_async && self.flags.async_to_generator {
       self.es_versions.insert(EsVersion::Es2017, true);
       self.features.async_to_generator = true
     }
@@ -245,11 +237,9 @@ impl VisitMut for ESC {
 
   // const b = async () => {}
   fn visit_mut_arrow_expr(&mut self, n: &mut ArrowExpr) {
-    if !self.flags.async_to_generator {
-      return;
-    }
+    n.visit_mut_children_with(self);
     // async arrow function
-    if n.is_async {
+    if n.is_async && self.flags.async_to_generator {
       self.es_versions.insert(EsVersion::Es2017, true);
       self.features.async_to_generator = true;
     }
@@ -327,11 +317,9 @@ impl VisitMut for ESC {
   // GOOD: [...a, "foo"];
   //       foo(...a);
   fn visit_mut_expr_or_spread(&mut self, n: &mut ExprOrSpread) {
+    println!("visit_mut_expr_or_spread: {:?}", n);
     n.visit_mut_children_with(self);
-    if !self.flags.spread {
-      return;
-    }
-    if n.spread.is_some() {
+    if n.spread.is_some() && self.flags.spread {
       self.features.spread = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -350,7 +338,6 @@ impl VisitMut for ESC {
   }
   // const b = { ...a }
   fn visit_mut_spread_element(&mut self, _n: &mut SpreadElement) {
-    println!("visit_mut_spread_element {:?}", _n);
     if !self.flags.object_rest_spread {
       return;
     }
