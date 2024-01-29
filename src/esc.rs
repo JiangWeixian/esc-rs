@@ -46,7 +46,6 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       block_scoping: should_enable!(BlockScoping, false) || es_version < EsVersion::Es2015,
       // TODO: test
       arrow_functions: should_enable!(ArrowFunctions, false) || es_version < EsVersion::Es2015,
-      // TODO: test
       parameters: should_enable!(Parameters, false) || es_version < EsVersion::Es2015,
       spread: should_enable!(Spread, false) || es_version < EsVersion::Es2015,
       // TODO: test
@@ -203,15 +202,37 @@ impl VisitMut for ESC {
 
   // async function a() {}
   fn visit_mut_function(&mut self, n: &mut Function) {
-    // function a({ x, ...rest }) {}
     n.visit_mut_children_with(self);
-    if contains_destructuring(&n.params) && !contains_rest(&n.params) {
+    // function a({ x, y }) {}
+    if contains_destructuring(&n.params) && !contains_object_rest(&n.params) {
       self.features.destructuring = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
-    if contains_rest(&n.params) && self.flags.object_rest_spread {
+    // function a({ x, ...rest }) {}
+    if contains_object_rest(&n.params) && self.flags.object_rest_spread {
       self.features.object_rest_spread = true;
       self.es_versions.insert(EsVersion::Es2018, true);
+    }
+    for param in &n.params {
+      match param.pat {
+        // function (x=1) {}
+        Pat::Assign(..) => {
+          if self.flags.parameters {
+            self.es_versions.insert(EsVersion::Es2015, true);
+            self.features.parameters = true;
+          }
+          return
+        },
+        // function (...args) {}
+        Pat::Rest(..) => {
+          if self.flags.parameters {
+            self.es_versions.insert(EsVersion::Es2015, true);
+            self.features.parameters = true;
+          }
+          return
+        },
+        _ => ()
+      }
     }
     if !self.flags.async_to_generator {
       return;
@@ -317,11 +338,11 @@ impl VisitMut for ESC {
   }
   // const { a, ...rest } = { a: 1 }
   fn visit_mut_var_declarators(&mut self, n: &mut Vec<VarDeclarator>) {
-    if contains_destructuring(n) && !contains_rest(n) && self.flags.destructuring {
+    if contains_destructuring(n) && !contains_object_rest(n) && self.flags.destructuring {
       self.features.destructuring = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
-    if contains_rest(n) && self.flags.object_rest_spread {
+    if contains_object_rest(n) && self.flags.object_rest_spread {
       self.features.object_rest_spread = true;
       self.es_versions.insert(EsVersion::Es2018, true);
     }
@@ -378,7 +399,7 @@ impl Visit for DestructuringVisitor {
   }
 }
 
-fn contains_rest<N>(node: &N) -> bool
+fn contains_object_rest<N>(node: &N) -> bool
 where
   N: VisitWith<RestVisitor>,
 {

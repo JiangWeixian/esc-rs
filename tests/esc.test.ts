@@ -174,4 +174,14 @@ describe('es2015', () => {
       await glob(notDestructuring, 'destructuring', false)
     })
   })
+  describe('parameters', () => {
+    const yes = path.join(fixtures, './Parameters/should')
+    const not = path.join(fixtures, './Parameters/should-not')
+    it('should', async () => {
+      await glob(yes, 'parameters')
+    })
+    it('should not', async () => {
+      await glob(not, 'parameters', false)
+    })
+  })
 })
