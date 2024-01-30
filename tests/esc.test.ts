@@ -34,6 +34,7 @@ const single = async (filename: string, feature: string, shouldFound = true) => 
     code,
     browserslist: 'IE 11',
   })
+  console.log(result)
   expect(result.features[feature]).toBe(shouldFound)
 }
 const spread = path.join(fixtures, './spread/should')
@@ -224,6 +225,12 @@ describe('es2015', () => {
     const yes = path.join(fixtures, './Classes/should')
     it('should', async () => {
       await glob(yes, 'classes')
+    })
+  })
+  describe('for_of', () => {
+    const yes = path.join(fixtures, './ForOf/should')
+    it('should', async () => {
+      await glob(yes, 'forOf')
     })
   })
 })

@@ -50,12 +50,13 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       sticky_regex: should_enable!(StickyRegex, false) || es_version < EsVersion::Es2015,
       shorthand_properties: should_enable!(ShorthandProperties, false)
         || es_version < EsVersion::Es2015,
-      computed_properties: should_enable!(ComputedProperties, false) || es_version < EsVersion::Es2015,
+      computed_properties: should_enable!(ComputedProperties, false)
+        || es_version < EsVersion::Es2015,
       destructuring: should_enable!(Destructuring, false) || es_version < EsVersion::Es2015,
       // TODO:
       classes: should_enable!(Classes, false) || es_version < EsVersion::Es2015,
       // duplicate_keys: should_enable!(DuplicateKeys, false) || es_version < EsVersion::Es2015,
-      // for_of: should_enable!(ForOf, false) || es_version < EsVersion::Es2015,
+      for_of: should_enable!(ForOf, false) || es_version < EsVersion::Es2015,
       // function_name: should_enable!(FunctionName, false) || es_version < EsVersion::Es2015,
       // literals: should_enable!(Literals, false) || es_version < EsVersion::Es2015,
       // new_target: should_enable!(NewTarget, false) || es_version < EsVersion::Es2015,
@@ -70,6 +71,7 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
 #[napi(object)]
 #[derive(Debug, Default, Clone)]
 pub struct FeaturesFlag {
+  pub for_of: bool,
   pub classes: bool,
   pub spread: bool,
   pub class_properties: bool,
@@ -103,7 +105,17 @@ pub struct ESC {
 impl VisitMut for ESC {
   noop_visit_mut_type!();
 
-  fn visit_mut_class_decl(&mut self,n: &mut ClassDecl) {
+  // for of
+  fn visit_mut_for_of_stmt(&mut self, n: &mut ForOfStmt) {
+    n.visit_mut_children_with(self);
+    if self.flags.for_of {
+      self.features.for_of = true;
+      self.es_versions.insert(EsVersion::Es2015, true);
+    }
+  }
+
+  // Class
+  fn visit_mut_class_decl(&mut self, n: &mut ClassDecl) {
     n.visit_mut_children_with(self);
     if self.flags.classes {
       self.features.classes = true;
@@ -173,21 +185,21 @@ impl VisitMut for ESC {
 
   // const let
   fn visit_mut_var_decl_kind(&mut self, n: &mut VarDeclKind) {
+    n.visit_mut_children_with(self);
     if !self.flags.block_scoping {
-      return;
-    }
-    match n {
-      VarDeclKind::Const => {
-        self.features.block_scoping = true;
-        self.es_versions.insert(EsVersion::Es2015, true);
-        return;
+      match n {
+        VarDeclKind::Const => {
+          self.features.block_scoping = true;
+          self.es_versions.insert(EsVersion::Es2015, true);
+          return;
+        }
+        VarDeclKind::Let => {
+          self.features.block_scoping = true;
+          self.es_versions.insert(EsVersion::Es2015, true);
+          return;
+        }
+        _ => (),
       }
-      VarDeclKind::Let => {
-        self.features.block_scoping = true;
-        self.es_versions.insert(EsVersion::Es2015, true);
-        return;
-      }
-      _ => (),
     }
   }
 
