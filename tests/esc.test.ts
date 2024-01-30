@@ -220,4 +220,10 @@ describe('es2015', () => {
       await glob(yes, 'stickyRegex')
     })
   })
+  describe('classes', () => {
+    const yes = path.join(fixtures, './Classes/should')
+    it('should', async () => {
+      await glob(yes, 'classes')
+    })
+  })
 })

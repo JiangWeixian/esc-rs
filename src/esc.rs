@@ -52,6 +52,17 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
         || es_version < EsVersion::Es2015,
       computed_properties: should_enable!(ComputedProperties, false) || es_version < EsVersion::Es2015,
       destructuring: should_enable!(Destructuring, false) || es_version < EsVersion::Es2015,
+      // TODO:
+      classes: should_enable!(Classes, false) || es_version < EsVersion::Es2015,
+      // duplicate_keys: should_enable!(DuplicateKeys, false) || es_version < EsVersion::Es2015,
+      // for_of: should_enable!(ForOf, false) || es_version < EsVersion::Es2015,
+      // function_name: should_enable!(FunctionName, false) || es_version < EsVersion::Es2015,
+      // literals: should_enable!(Literals, false) || es_version < EsVersion::Es2015,
+      // new_target: should_enable!(NewTarget, false) || es_version < EsVersion::Es2015,
+      // object_super: should_enable!(ObjectSuper, false) || es_version < EsVersion::Es2015,
+      // typeof_symbol: should_enable!(TypeOfSymbol, false) || es_version < EsVersion::Es2015,
+      // unicode_escapes: should_enable!(UnicodeEscapes, false) || es_version < EsVersion::Es2015,
+      // unicode_regex: should_enable!(UnicodeRegex, false) || es_version < EsVersion::Es2015,
     },
     ..Default::default()
   }
@@ -59,6 +70,7 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
 #[napi(object)]
 #[derive(Debug, Default, Clone)]
 pub struct FeaturesFlag {
+  pub classes: bool,
   pub spread: bool,
   pub class_properties: bool,
   pub destructuring: bool,
@@ -90,6 +102,14 @@ pub struct ESC {
 // https://github.com/sudheerj/ECMAScript-features
 impl VisitMut for ESC {
   noop_visit_mut_type!();
+
+  fn visit_mut_class_decl(&mut self,n: &mut ClassDecl) {
+    n.visit_mut_children_with(self);
+    if self.flags.classes {
+      self.features.classes = true;
+      self.es_versions.insert(EsVersion::Es2015, true);
+    }
+  }
 
   // const obj = { ["key"]: value }
   fn visit_mut_computed_prop_name(&mut self, n: &mut ComputedPropName) {
