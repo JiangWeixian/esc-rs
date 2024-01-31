@@ -57,6 +57,7 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       classes: should_enable!(Classes, false) || es_version < EsVersion::Es2015,
       regenerator: should_enable!(Regenerator, false) || es_version < EsVersion::Es2015,
       // duplicate_keys: should_enable!(DuplicateKeys, false) || es_version < EsVersion::Es2015,
+      // instanceOf: should_enable!(InstanceOf, false) || es_version < EsVersion::Es2015,
       for_of: should_enable!(ForOf, false) || es_version < EsVersion::Es2015,
       function_name: should_enable!(FunctionName, false) || es_version < EsVersion::Es2015,
       // literals: should_enable!(Literals, false) || es_version < EsVersion::Es2015,
