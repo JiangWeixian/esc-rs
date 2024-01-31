@@ -61,7 +61,7 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       // literals: should_enable!(Literals, false) || es_version < EsVersion::Es2015,
       // new_target: should_enable!(NewTarget, false) || es_version < EsVersion::Es2015,
       // object_super: should_enable!(ObjectSuper, false) || es_version < EsVersion::Es2015,
-      // typeof_symbol: should_enable!(TypeOfSymbol, false) || es_version < EsVersion::Es2015,
+      typeof_symbol: should_enable!(TypeOfSymbol, false) || es_version < EsVersion::Es2015,
       // unicode_escapes: should_enable!(UnicodeEscapes, false) || es_version < EsVersion::Es2015,
       // unicode_regex: should_enable!(UnicodeRegex, false) || es_version < EsVersion::Es2015,
     },
@@ -71,6 +71,7 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
 #[napi(object)]
 #[derive(Debug, Default, Clone)]
 pub struct FeaturesFlag {
+  pub typeof_symbol: bool,
   pub for_of: bool,
   pub classes: bool,
   pub spread: bool,
@@ -319,24 +320,45 @@ impl VisitMut for ESC {
 
   // ??
   fn visit_mut_bin_expr(&mut self, n: &mut BinExpr) {
-    if !self.flags.nullish_coalescing || !self.flags.exponentiation_operator {
-      return;
-    }
+    n.visit_mut_children_with(self);
     match n.op {
       // ??
       BinaryOp::NullishCoalescing => {
-        self.features.nullish_coalescing = true;
-        self.es_versions.insert(EsVersion::Es2020, true);
+        if self.flags.nullish_coalescing {
+          self.features.nullish_coalescing = true;
+          self.es_versions.insert(EsVersion::Es2020, true);
+        }
         return;
       }
       // **
       BinaryOp::Exp => {
-        self.features.exponentiation_operator = true;
-        self.es_versions.insert(EsVersion::Es2016, true);
+        if self.flags.exponentiation_operator {
+          self.features.exponentiation_operator = true;
+          self.es_versions.insert(EsVersion::Es2016, true);
+        }
         return;
       }
       _ => (),
     };
+    // typeof Symbol() === 'symbol' or 'symbol' === typeof Symbol
+    if let Expr::Unary(UnaryExpr {
+      op: op!("typeof"), ..
+    }) = *n.left
+    {
+      if is_symbol_literal(&n.right) && self.flags.typeof_symbol {
+        self.features.typeof_symbol = true;
+        self.es_versions.insert(EsVersion::Es2015, true);
+      }
+    }
+    if let Expr::Unary(UnaryExpr {
+      op: op!("typeof"), ..
+    }) = *n.right
+    {
+      if is_symbol_literal(&n.left) && self.flags.typeof_symbol {
+        self.features.typeof_symbol = true;
+        self.es_versions.insert(EsVersion::Es2015, true);
+      }
+    }
   }
 
   // ?.
@@ -390,6 +412,13 @@ impl VisitMut for ESC {
     }
     self.features.optional_catch_binding = true;
     self.es_versions.insert(EsVersion::Es2019, true);
+  }
+}
+
+fn is_symbol_literal(e: &Expr) -> bool {
+  match e {
+    Expr::Lit(Lit::Str(Str { value, .. })) => matches!(&**value, "symbol"),
+    _ => false,
   }
 }
 

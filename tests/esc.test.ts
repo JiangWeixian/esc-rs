@@ -233,4 +233,10 @@ describe('es2015', () => {
       await glob(yes, 'forOf')
     })
   })
+  describe('typeof_symbol', () => {
+    const yes = path.join(fixtures, './TypeOfSymbol/should')
+    it('should', async () => {
+      await glob(yes, 'typeofSymbol')
+    })
+  })
 })
