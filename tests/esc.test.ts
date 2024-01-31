@@ -249,4 +249,14 @@ describe('es2015', () => {
       await glob(no, 'objectSuper', false)
     })
   })
+  describe('newTarget', () => {
+    const yes = path.join(fixtures, './NewTarget/should')
+    const no = path.join(fixtures, './NewTarget/should-not')
+    it('should', async () => {
+      await glob(yes, 'newTarget')
+    })
+    it('should-not', async () => {
+      await glob(no, 'newTarget', false)
+    })
+  })
 })

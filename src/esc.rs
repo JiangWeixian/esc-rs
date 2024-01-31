@@ -59,7 +59,7 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       for_of: should_enable!(ForOf, false) || es_version < EsVersion::Es2015,
       // function_name: should_enable!(FunctionName, false) || es_version < EsVersion::Es2015,
       // literals: should_enable!(Literals, false) || es_version < EsVersion::Es2015,
-      // new_target: should_enable!(NewTarget, false) || es_version < EsVersion::Es2015,
+      new_target: should_enable!(NewTarget, false) || es_version < EsVersion::Es2015,
       object_super: should_enable!(ObjectSuper, false) || es_version < EsVersion::Es2015,
       typeof_symbol: should_enable!(TypeOfSymbol, false) || es_version < EsVersion::Es2015,
       // unicode_escapes: should_enable!(UnicodeEscapes, false) || es_version < EsVersion::Es2015,
@@ -71,6 +71,7 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
 #[napi(object)]
 #[derive(Debug, Default, Clone)]
 pub struct FeaturesFlag {
+  pub new_target: bool,
   pub object_super: bool,
   pub typeof_symbol: bool,
   pub for_of: bool,
@@ -106,6 +107,14 @@ pub struct ESC {
 // https://github.com/sudheerj/ECMAScript-features
 impl VisitMut for ESC {
   noop_visit_mut_type!();
+
+  fn visit_mut_meta_prop_expr(&mut self, n: &mut MetaPropExpr) {
+    n.visit_mut_children_with(self);
+    if self.flags.new_target {
+      self.features.new_target = true;
+      self.es_versions.insert(EsVersion::Es2015, true);
+    }
+  }
 
   // for of
   fn visit_mut_for_of_stmt(&mut self, n: &mut ForOfStmt) {
