@@ -35,7 +35,6 @@ const single = async (filename: string, feature: string, shouldFound = true) => 
     code,
     browserslist: 'IE 11',
   })
-  console.log(result)
   expect(result.features[feature]).toBe(shouldFound)
 }
 const spread = path.join(fixtures, './spread/should')
