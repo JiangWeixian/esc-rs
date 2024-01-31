@@ -4,9 +4,7 @@ use preset_env_base::query::targets_to_versions;
 use preset_env_base::version::should_enable;
 use swc_core::ecma::ast::EsVersion;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::visit::{
-  noop_visit_mut_type, noop_visit_type, Visit, VisitMut, VisitMutWith, VisitWith,
-};
+use swc_core::ecma::visit::{noop_visit_type, Visit, VisitWith};
 use swc_ecma_preset_env::{Config, Feature, FeatureOrModule, Versions};
 
 pub fn compat(es_version: EsVersion, c: Config) -> ESC {
@@ -109,12 +107,12 @@ pub struct ESC {
 }
 
 // https://github.com/sudheerj/ECMAScript-features
-impl VisitMut for ESC {
-  noop_visit_mut_type!();
+impl Visit for ESC {
+  noop_visit_type!();
 
   // const a = function() {}
-  fn visit_mut_fn_expr(&mut self, n: &mut FnExpr) {
-    n.visit_mut_children_with(self);
+  fn visit_fn_expr(&mut self, n: &FnExpr) {
+    n.visit_children_with(self);
     if self.flags.function_name {
       self.features.function_name = true;
       self.es_versions.insert(EsVersion::Es2015, true);
@@ -122,8 +120,8 @@ impl VisitMut for ESC {
   }
 
   // var a = class {}
-  fn visit_mut_class_expr(&mut self, n: &mut ClassExpr) {
-    n.visit_mut_children_with(self);
+  fn visit_class_expr(&mut self, n: &ClassExpr) {
+    n.visit_children_with(self);
     if self.flags.function_name {
       self.features.function_name = true;
       self.es_versions.insert(EsVersion::Es2015, true);
@@ -131,8 +129,8 @@ impl VisitMut for ESC {
   }
 
   // new.target
-  fn visit_mut_meta_prop_expr(&mut self, n: &mut MetaPropExpr) {
-    n.visit_mut_children_with(self);
+  fn visit_meta_prop_expr(&mut self, n: &MetaPropExpr) {
+    n.visit_children_with(self);
     if self.flags.new_target {
       self.features.new_target = true;
       self.es_versions.insert(EsVersion::Es2015, true);
@@ -140,8 +138,8 @@ impl VisitMut for ESC {
   }
 
   // for of
-  fn visit_mut_for_of_stmt(&mut self, n: &mut ForOfStmt) {
-    n.visit_mut_children_with(self);
+  fn visit_for_of_stmt(&mut self, n: &ForOfStmt) {
+    n.visit_children_with(self);
     if self.flags.for_of {
       self.features.for_of = true;
       self.es_versions.insert(EsVersion::Es2015, true);
@@ -149,8 +147,8 @@ impl VisitMut for ESC {
   }
 
   // Class
-  fn visit_mut_class_decl(&mut self, n: &mut ClassDecl) {
-    n.visit_mut_children_with(self);
+  fn visit_class_decl(&mut self, n: &ClassDecl) {
+    n.visit_children_with(self);
     if self.flags.classes {
       self.features.classes = true;
       self.es_versions.insert(EsVersion::Es2015, true);
@@ -158,28 +156,27 @@ impl VisitMut for ESC {
   }
 
   // const obj = { ["key"]: value }
-  fn visit_mut_computed_prop_name(&mut self, n: &mut ComputedPropName) {
-    if !self.flags.computed_properties {
-      return;
+  fn visit_computed_prop_name(&mut self, n: &ComputedPropName) {
+    n.visit_children_with(self);
+    if self.flags.computed_properties {
+      self.es_versions.insert(EsVersion::Es2015, true);
+      self.features.computed_properties = true;
     }
-    self.es_versions.insert(EsVersion::Es2015, true);
-    self.features.computed_properties = true;
   }
 
   // class A { a = '' }
-  fn visit_mut_class_prop(&mut self, n: &mut ClassProp) {
-    if !self.flags.class_properties {
-      return;
+  fn visit_class_prop(&mut self, n: &ClassProp) {
+    n.visit_children_with(self);
+    if self.flags.class_properties {
+      self.es_versions.insert(EsVersion::Es2021, true);
+      self.features.class_properties = true;
     }
-    self.es_versions.insert(EsVersion::Es2021, true);
-    self.features.class_properties = true;
   }
 
   // Visit object prop
-  // TODO: check `const obj = { a() {} }`
   // const obj = { a, b }
-  fn visit_mut_prop(&mut self, n: &mut Prop) {
-    n.visit_mut_children_with(self);
+  fn visit_prop(&mut self, n: &Prop) {
+    n.visit_children_with(self);
     match n {
       Prop::Shorthand(..) => {
         if self.flags.shorthand_properties {
@@ -199,28 +196,25 @@ impl VisitMut for ESC {
     }
   }
   // /Foo\s+(\d+)/y
-  fn visit_mut_regex(&mut self, n: &mut Regex) {
-    if !self.flags.sticky_regex {
-      return;
-    }
-    if n.flags.contains("y") {
+  fn visit_regex(&mut self, n: &Regex) {
+    if n.flags.contains("y") && self.flags.sticky_regex {
       self.features.sticky_regex = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
   }
   // template string
-  fn visit_mut_tpl(&mut self, n: &mut Tpl) {
-    if !self.flags.template_literals {
-      return;
+  fn visit_tpl(&mut self, n: &Tpl) {
+    n.visit_children_with(self);
+    if self.flags.template_literals {
+      self.features.template_literals = true;
+      self.es_versions.insert(EsVersion::Es2015, true);
     }
-    self.features.template_literals = true;
-    self.es_versions.insert(EsVersion::Es2015, true);
   }
 
   // const let
-  fn visit_mut_var_decl_kind(&mut self, n: &mut VarDeclKind) {
-    n.visit_mut_children_with(self);
-    if !self.flags.block_scoping {
+  fn visit_var_decl_kind(&mut self, n: &VarDeclKind) {
+    n.visit_children_with(self);
+    if self.flags.block_scoping {
       match n {
         VarDeclKind::Const => {
           self.features.block_scoping = true;
@@ -238,34 +232,34 @@ impl VisitMut for ESC {
   }
 
   // static
-  fn visit_mut_static_block(&mut self, n: &mut StaticBlock) {
-    if !self.flags.class_static_block {
-      return;
+  fn visit_static_block(&mut self, n: &StaticBlock) {
+    n.visit_children_with(self);
+    if self.flags.class_static_block {
+      self.features.class_static_block = true;
+      self.es_versions.insert(EsVersion::Es2022, true);
     }
-    self.es_versions.insert(EsVersion::Es2022, true);
-    self.features.class_static_block = true;
   }
 
   // #private
-  fn visit_mut_private_method(&mut self, n: &mut PrivateMethod) {
-    if !self.flags.private_methods {
-      return;
+  fn visit_private_method(&mut self, n: &PrivateMethod) {
+    n.visit_children_with(self);
+    if self.flags.private_methods {
+      self.es_versions.insert(EsVersion::Es2022, true);
+      self.features.private_methods = true;
     }
-    self.es_versions.insert(EsVersion::Es2022, true);
-    self.features.private_methods = true;
   }
 
-  fn visit_mut_private_prop(&mut self, n: &mut PrivateProp) {
-    if !self.flags.private_methods {
-      return;
+  fn visit_private_prop(&mut self, n: &PrivateProp) {
+    n.visit_children_with(self);
+    if self.flags.private_methods {
+      self.es_versions.insert(EsVersion::Es2022, true);
+      self.features.private_methods = true;
     }
-    self.es_versions.insert(EsVersion::Es2022, true);
-    self.features.private_methods = true;
   }
 
   // async function a() {}
-  fn visit_mut_function(&mut self, n: &mut Function) {
-    n.visit_mut_children_with(self);
+  fn visit_function(&mut self, n: &Function) {
+    n.visit_children_with(self);
     // function a({ x, y }) {}
     if contains_destructuring(&n.params) && !contains_object_rest(&n.params) {
       self.features.destructuring = true;
@@ -308,8 +302,8 @@ impl VisitMut for ESC {
   }
 
   // const b = async () => {}
-  fn visit_mut_arrow_expr(&mut self, n: &mut ArrowExpr) {
-    n.visit_mut_children_with(self);
+  fn visit_arrow_expr(&mut self, n: &ArrowExpr) {
+    n.visit_children_with(self);
     // async arrow function
     if n.is_async && self.flags.async_to_generator {
       self.es_versions.insert(EsVersion::Es2017, true);
@@ -321,34 +315,23 @@ impl VisitMut for ESC {
   }
 
   // ??= ||= &&=
-  fn visit_mut_assign_op(&mut self, n: &mut AssignOp) {
-    if !self.flags.logical_assignment_operators || !self.flags.exponentiation_operator {
-      return;
-    }
-    n.visit_mut_children_with(self);
+  fn visit_assign_op(&mut self, n: &AssignOp) {
+    n.visit_children_with(self);
     match n {
       // &&=
-      AssignOp::AndAssign => {
-        self.features.logical_assignment_operators = true;
-        self.es_versions.insert(EsVersion::Es2021, true);
-        return;
-      }
-      // ??=
-      AssignOp::NullishAssign => {
-        self.features.logical_assignment_operators = true;
-        self.es_versions.insert(EsVersion::Es2021, true);
-        return;
-      }
-      // ||=
-      AssignOp::OrAssign => {
-        self.features.logical_assignment_operators = true;
-        self.es_versions.insert(EsVersion::Es2021, true);
+      AssignOp::AndAssign | AssignOp::NullishAssign | AssignOp::OrAssign => {
+        if self.flags.logical_assignment_operators {
+          self.features.logical_assignment_operators = true;
+          self.es_versions.insert(EsVersion::Es2021, true);
+        }
         return;
       }
       // **=
       AssignOp::ExpAssign => {
-        self.features.exponentiation_operator = true;
-        self.es_versions.insert(EsVersion::Es2016, true);
+        if self.flags.exponentiation_operator {
+          self.features.exponentiation_operator = true;
+          self.es_versions.insert(EsVersion::Es2016, true);
+        }
         return;
       }
       _ => (),
@@ -356,8 +339,8 @@ impl VisitMut for ESC {
   }
 
   // ??
-  fn visit_mut_bin_expr(&mut self, n: &mut BinExpr) {
-    n.visit_mut_children_with(self);
+  fn visit_bin_expr(&mut self, n: &BinExpr) {
+    n.visit_children_with(self);
     match n.op {
       // ??
       BinaryOp::NullishCoalescing => {
@@ -399,24 +382,25 @@ impl VisitMut for ESC {
   }
 
   // ?.
-  fn visit_mut_opt_chain_expr(&mut self, _n: &mut OptChainExpr) {
-    if !self.flags.optional_chaining {
-      return;
+  fn visit_opt_chain_expr(&mut self, n: &OptChainExpr) {
+    n.visit_children_with(self);
+    if self.flags.optional_chaining {
+      self.features.optional_chaining = true;
+      self.es_versions.insert(EsVersion::Es2020, true);
     }
-    self.features.optional_chaining = true;
-    self.es_versions.insert(EsVersion::Es2020, true);
   }
 
   // GOOD: [...a, "foo"];
   //       foo(...a);
-  fn visit_mut_expr_or_spread(&mut self, n: &mut ExprOrSpread) {
-    n.visit_mut_children_with(self);
+  fn visit_expr_or_spread(&mut self, n: &ExprOrSpread) {
+    n.visit_children_with(self);
     if n.spread.is_some() && self.flags.spread {
       self.features.spread = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
   }
-  fn visit_mut_var_declarators(&mut self, n: &mut Vec<VarDeclarator>) {
+
+  fn visit_var_declarators(&mut self, n: &[VarDeclarator]) {
     // const { a } = { a: 1 }
     if contains_destructuring(n) && !contains_object_rest(n) && self.flags.destructuring {
       self.features.destructuring = true;
@@ -431,35 +415,34 @@ impl VisitMut for ESC {
       self.features.object_super = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
-    n.visit_mut_children_with(self);
+    n.visit_children_with(self);
   }
   // const b = { ...a }
-  fn visit_mut_spread_element(&mut self, _n: &mut SpreadElement) {
-    if !self.flags.object_rest_spread {
-      return;
+  fn visit_spread_element(&mut self, n: &SpreadElement) {
+    n.visit_children_with(self);
+    if self.flags.object_rest_spread {
+      self.features.object_rest_spread = true;
+      self.es_versions.insert(EsVersion::Es2018, true);
     }
-    self.features.object_rest_spread = true;
-    self.es_versions.insert(EsVersion::Es2018, true);
   }
 
   // try {} catch {}
-  fn visit_mut_catch_clause(&mut self, cc: &mut CatchClause) {
-    if !self.flags.optional_catch_binding {
-      return;
-    }
-    cc.visit_mut_children_with(self);
+  fn visit_catch_clause(&mut self, cc: &CatchClause) {
+    cc.visit_children_with(self);
 
     if cc.param.is_some() {
       return;
     }
-    self.features.optional_catch_binding = true;
-    self.es_versions.insert(EsVersion::Es2019, true);
+    if self.flags.optional_catch_binding {
+      self.features.optional_catch_binding = true;
+      self.es_versions.insert(EsVersion::Es2019, true);
+    }
   }
 }
 
 fn contains_object_super<N>(node: &N) -> bool
 where
-  N: VisitWith<ObjectSuperVisitor>,
+  N: VisitWith<ObjectSuperVisitor> + ?Sized,
 {
   let mut v = ObjectSuperVisitor { found: false };
   node.visit_with(&mut v);
@@ -474,7 +457,7 @@ struct ObjectSuperVisitor {
 impl Visit for ObjectSuperVisitor {
   noop_visit_type!();
 
-  fn visit_super_prop_expr(&mut self, n: &SuperPropExpr) {
+  fn visit_super_prop_expr(&mut self, _n: &SuperPropExpr) {
     self.found = true;
   }
 }
@@ -488,7 +471,7 @@ fn is_symbol_literal(e: &Expr) -> bool {
 
 fn contains_destructuring<N>(node: &N) -> bool
 where
-  N: VisitWith<DestructuringVisitor>,
+  N: VisitWith<DestructuringVisitor> + ?Sized,
 {
   let mut v = DestructuringVisitor { found: false };
   node.visit_with(&mut v);
@@ -514,7 +497,7 @@ impl Visit for DestructuringVisitor {
 
 fn contains_object_rest<N>(node: &N) -> bool
 where
-  N: VisitWith<RestVisitor>,
+  N: VisitWith<RestVisitor> + ?Sized,
 {
   let mut v = RestVisitor { found: false };
   node.visit_with(&mut v);

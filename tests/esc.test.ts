@@ -77,16 +77,9 @@ describe('es2022', () => {
 })
 
 describe('es2021', () => {
-  const logicalAssignmentOperators = path.join(fixtures, './LogicalAssignmentOperators')
+  const yes = path.join(fixtures, './LogicalAssignmentOperators/should')
   it('logicalAssignmentOperators', async () => {
-    const filename = path.join(logicalAssignmentOperators, './index.js')
-    const code = (await fs.readFile(filename)).toString('utf-8')
-    const result = detect({
-      filename,
-      code,
-      browserslist: 'IE 11',
-    })
-    expect(result.features.logicalAssignmentOperators).toBe(true)
+    await glob(yes, 'logicalAssignmentOperators')
   })
 })
 

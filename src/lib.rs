@@ -12,7 +12,7 @@ use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::errors::Handler;
 use swc_core::common::{sync::Lrc, FileName, SourceMap, GLOBALS};
 use swc_core::ecma::ast::EsVersion;
-use swc_core::ecma::visit::VisitMutWith;
+use swc_core::ecma::visit::VisitWith;
 use swc_ecma_parser::Syntax;
 use swc_ecma_preset_env::{Config, Targets};
 use swc_error_reporters::handler::{try_with_handler, HandlerOpts};
@@ -102,7 +102,7 @@ pub fn detect(options: ParseOptions) -> Result<DetectResult, napi::Error> {
 
   try_with(cm.clone(), false, |handler| {
     let comments = SingleThreadedComments::default();
-    let mut module = parse_js(
+    let module = parse_js(
       cm,
       fm,
       &handler,
@@ -120,7 +120,7 @@ pub fn detect(options: ParseOptions) -> Result<DetectResult, napi::Error> {
         ..Default::default()
       },
     );
-    module.visit_mut_with(&mut esc);
+    module.visit_with(&mut esc);
     Ok(DetectResult {
       features: esc.features,
       es_versions: esc
