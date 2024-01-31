@@ -60,7 +60,7 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       // function_name: should_enable!(FunctionName, false) || es_version < EsVersion::Es2015,
       // literals: should_enable!(Literals, false) || es_version < EsVersion::Es2015,
       // new_target: should_enable!(NewTarget, false) || es_version < EsVersion::Es2015,
-      // object_super: should_enable!(ObjectSuper, false) || es_version < EsVersion::Es2015,
+      object_super: should_enable!(ObjectSuper, false) || es_version < EsVersion::Es2015,
       typeof_symbol: should_enable!(TypeOfSymbol, false) || es_version < EsVersion::Es2015,
       // unicode_escapes: should_enable!(UnicodeEscapes, false) || es_version < EsVersion::Es2015,
       // unicode_regex: should_enable!(UnicodeRegex, false) || es_version < EsVersion::Es2015,
@@ -71,6 +71,7 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
 #[napi(object)]
 #[derive(Debug, Default, Clone)]
 pub struct FeaturesFlag {
+  pub object_super: bool,
   pub typeof_symbol: bool,
   pub for_of: bool,
   pub classes: bool,
@@ -379,15 +380,20 @@ impl VisitMut for ESC {
       self.es_versions.insert(EsVersion::Es2015, true);
     }
   }
-  // const { a, ...rest } = { a: 1 }
   fn visit_mut_var_declarators(&mut self, n: &mut Vec<VarDeclarator>) {
+    // const { a } = { a: 1 }
     if contains_destructuring(n) && !contains_object_rest(n) && self.flags.destructuring {
       self.features.destructuring = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
+    // const { a, ...rest } = { a: 1 }
     if contains_object_rest(n) && self.flags.object_rest_spread {
       self.features.object_rest_spread = true;
       self.es_versions.insert(EsVersion::Es2018, true);
+    }
+    if contains_object_super(n) && self.flags.object_super {
+      self.features.object_super = true;
+      self.es_versions.insert(EsVersion::Es2015, true);
     }
     n.visit_mut_children_with(self);
   }
@@ -412,6 +418,28 @@ impl VisitMut for ESC {
     }
     self.features.optional_catch_binding = true;
     self.es_versions.insert(EsVersion::Es2019, true);
+  }
+}
+
+fn contains_object_super<N>(node: &N) -> bool
+where
+  N: VisitWith<ObjectSuperVisitor>,
+{
+  let mut v = ObjectSuperVisitor { found: false };
+  node.visit_with(&mut v);
+  v.found
+}
+
+#[derive(Default)]
+struct ObjectSuperVisitor {
+  found: bool,
+}
+
+impl Visit for ObjectSuperVisitor {
+  noop_visit_type!();
+
+  fn visit_super_prop_expr(&mut self, n: &SuperPropExpr) {
+    self.found = true;
   }
 }
 

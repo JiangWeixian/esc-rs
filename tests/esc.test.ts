@@ -239,4 +239,14 @@ describe('es2015', () => {
       await glob(yes, 'typeofSymbol')
     })
   })
+  describe('objectSuper', () => {
+    const yes = path.join(fixtures, './ObjectSuper/should')
+    const no = path.join(fixtures, './ObjectSuper/should-not')
+    it('should', async () => {
+      await glob(yes, 'objectSuper')
+    })
+    it('should-not', async () => {
+      await glob(no, 'objectSuper', false)
+    })
+  })
 })
