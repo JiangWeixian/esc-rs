@@ -55,6 +55,7 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       destructuring: should_enable!(Destructuring, false) || es_version < EsVersion::Es2015,
       // TODO:
       classes: should_enable!(Classes, false) || es_version < EsVersion::Es2015,
+      regenerator: should_enable!(Regenerator, false) || es_version < EsVersion::Es2015,
       // duplicate_keys: should_enable!(DuplicateKeys, false) || es_version < EsVersion::Es2015,
       for_of: should_enable!(ForOf, false) || es_version < EsVersion::Es2015,
       function_name: should_enable!(FunctionName, false) || es_version < EsVersion::Es2015,
@@ -71,6 +72,7 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
 #[napi(object)]
 #[derive(Debug, Default, Clone)]
 pub struct FeaturesFlag {
+  pub regenerator: bool,
   pub function_name: bool,
   pub new_target: bool,
   pub object_super: bool,
@@ -109,9 +111,8 @@ pub struct ESC {
 impl VisitMut for ESC {
   noop_visit_mut_type!();
 
-
   // const a = function() {}
-  fn visit_mut_fn_expr(&mut self,n: &mut FnExpr) {
+  fn visit_mut_fn_expr(&mut self, n: &mut FnExpr) {
     n.visit_mut_children_with(self);
     if self.flags.function_name {
       self.features.function_name = true;
@@ -120,7 +121,7 @@ impl VisitMut for ESC {
   }
 
   // var a = class {}
-  fn visit_mut_class_expr(&mut self,n: &mut ClassExpr) {
+  fn visit_mut_class_expr(&mut self, n: &mut ClassExpr) {
     n.visit_mut_children_with(self);
     if self.flags.function_name {
       self.features.function_name = true;
@@ -298,6 +299,10 @@ impl VisitMut for ESC {
     if n.is_async && self.flags.async_to_generator {
       self.es_versions.insert(EsVersion::Es2017, true);
       self.features.async_to_generator = true
+    }
+    if n.is_generator && self.flags.regenerator {
+      self.es_versions.insert(EsVersion::Es2015, true);
+      self.features.regenerator = true
     }
   }
 

@@ -27,6 +27,7 @@ const glob = async (cwd: string, feature: string, shouldFound = true) => {
     expect(result.features[feature]).toBe(shouldFound)
   }
 }
+// eslint-disable-next-line unused-imports/no-unused-vars
 const single = async (filename: string, feature: string, shouldFound = true) => {
   const code = (await fs.readFile(filename)).toString('utf-8')
   const result = detect({
@@ -267,6 +268,12 @@ describe('es2015', () => {
     })
     it('should-not', async () => {
       await glob(no, 'functionName', false)
+    })
+  })
+  describe('regenerator', () => {
+    const yes = path.join(fixtures, './Regenerator/should')
+    it('should', async () => {
+      await glob(yes, 'regenerator')
     })
   })
 })
