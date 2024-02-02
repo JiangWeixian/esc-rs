@@ -31,6 +31,10 @@ export interface FeaturesFlag {
   optionalChaining: boolean
   optionalCatchBinding: boolean
 }
+export interface Range {
+  s: number
+  e: number
+}
 export interface ParseOptions {
   target?: string
   browserslist: string
@@ -40,5 +44,6 @@ export interface ParseOptions {
 export interface DetectResult {
   features: FeaturesFlag
   esVersions: Record<string, boolean>
+  ranges: Array<Range>
 }
 export function detect(options: ParseOptions): DetectResult

@@ -2,12 +2,18 @@ use std::collections::HashMap;
 
 use preset_env_base::query::targets_to_versions;
 use preset_env_base::version::should_enable;
+use swc_core::common::{sync::Lrc, SourceFile, SourceMap, Span, Spanned};
 use swc_core::ecma::ast::EsVersion;
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{noop_visit_type, Visit, VisitWith};
 use swc_ecma_preset_env::{Config, Feature, FeatureOrModule, Versions};
 
-pub fn compat(es_version: EsVersion, c: Config) -> ESC {
+pub fn compat(
+  es_version: EsVersion,
+  source_map: Lrc<SourceMap>,
+  source_file: Lrc<SourceFile>,
+  c: Config,
+) -> ESC {
   let targets: Versions = targets_to_versions(c.targets).expect("failed to parse targets");
   let is_any_target = targets.is_any_target();
   let (include, _included_modules) = FeatureOrModule::split(c.include);
@@ -51,12 +57,12 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       computed_properties: should_enable!(ComputedProperties, false)
         || es_version < EsVersion::Es2015,
       destructuring: should_enable!(Destructuring, false) || es_version < EsVersion::Es2015,
-      // TODO:
       classes: should_enable!(Classes, false) || es_version < EsVersion::Es2015,
       regenerator: should_enable!(Regenerator, false) || es_version < EsVersion::Es2015,
       // duplicate_keys: should_enable!(DuplicateKeys, false) || es_version < EsVersion::Es2015,
       // instanceOf: should_enable!(InstanceOf, false) || es_version < EsVersion::Es2015,
       for_of: should_enable!(ForOf, false) || es_version < EsVersion::Es2015,
+      // TODO: Looks like webpack runtime code always contain sho
       function_name: should_enable!(FunctionName, false) || es_version < EsVersion::Es2015,
       // literals: should_enable!(Literals, false) || es_version < EsVersion::Es2015,
       new_target: should_enable!(NewTarget, false) || es_version < EsVersion::Es2015,
@@ -65,7 +71,11 @@ pub fn compat(es_version: EsVersion, c: Config) -> ESC {
       // unicode_escapes: should_enable!(UnicodeEscapes, false) || es_version < EsVersion::Es2015,
       // unicode_regex: should_enable!(UnicodeRegex, false) || es_version < EsVersion::Es2015,
     },
-    ..Default::default()
+    source_file,
+    source_map,
+    ranges: vec![],
+    features: FeaturesFlag::default(),
+    es_versions: HashMap::new(),
   }
 }
 #[napi(object)]
@@ -99,39 +109,72 @@ pub struct FeaturesFlag {
   pub optional_catch_binding: bool,
 }
 
-#[derive(Debug, Default, Clone)]
+#[napi(object)]
+#[derive(Debug, Clone)]
+pub struct Range {
+  pub s: i32,
+  pub e: i32,
+}
+
+#[derive(Clone)]
 pub struct ESC {
   pub flags: FeaturesFlag,
   pub features: FeaturesFlag,
   pub es_versions: HashMap<EsVersion, bool>,
+  pub ranges: Vec<Range>,
+  source_map: Lrc<SourceMap>,
+  source_file: Lrc<SourceFile>,
+}
+
+impl ESC {
+  fn get_real_span(&self, span: Span) -> (i32, i32) {
+    let real_span = self.source_map.span_to_char_offset(&self.source_file, span);
+    (real_span.0 as i32, real_span.1 as i32)
+  }
+  fn get_real_span_from_range(&self, lo: Span, hi: Span) -> (i32, i32) {
+    let real_span_lo = self.source_map.span_to_char_offset(&self.source_file, lo);
+    let real_span_hi = self.source_map.span_to_char_offset(&self.source_file, hi);
+    (real_span_lo.0 as i32, real_span_hi.1 as i32)
+  }
+  fn add_range(&mut self, span: Span) {
+    let real_span = self.get_real_span(span);
+    self.ranges.push(Range {
+      s: real_span.0,
+      e: real_span.1,
+    });
+  }
 }
 
 // https://github.com/sudheerj/ECMAScript-features
 impl Visit for ESC {
   noop_visit_type!();
 
+  // Webpack runtime code always contain function_name
   // const a = function() {}
-  fn visit_fn_expr(&mut self, n: &FnExpr) {
-    n.visit_children_with(self);
-    if self.flags.function_name {
-      self.features.function_name = true;
-      self.es_versions.insert(EsVersion::Es2015, true);
-    }
-  }
+  // fn visit_fn_expr(&mut self, n: &FnExpr) {
+  //   n.visit_children_with(self);
+  //   if self.flags.function_name {
+  //     // println!("function_name: {:?}", n.function.span);
+  //     self.features.function_name = true;
+  //     self.es_versions.insert(EsVersion::Es2015, true);
+  //   }
+  // }
 
   // var a = class {}
-  fn visit_class_expr(&mut self, n: &ClassExpr) {
-    n.visit_children_with(self);
-    if self.flags.function_name {
-      self.features.function_name = true;
-      self.es_versions.insert(EsVersion::Es2015, true);
-    }
-  }
+  // fn visit_class_expr(&mut self, n: &ClassExpr) {
+  //   println!("visit_class_expr {:?}", n.class.span);
+  //   n.visit_children_with(self);
+  //   if self.flags.function_name {
+  //     self.features.function_name = true;
+  //     self.es_versions.insert(EsVersion::Es2015, true);
+  //   }
+  // }
 
   // new.target
   fn visit_meta_prop_expr(&mut self, n: &MetaPropExpr) {
     n.visit_children_with(self);
     if self.flags.new_target {
+      self.add_range(n.span);
       self.features.new_target = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -141,6 +184,7 @@ impl Visit for ESC {
   fn visit_for_of_stmt(&mut self, n: &ForOfStmt) {
     n.visit_children_with(self);
     if self.flags.for_of {
+      self.add_range(n.span);
       self.features.for_of = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -150,6 +194,7 @@ impl Visit for ESC {
   fn visit_class_decl(&mut self, n: &ClassDecl) {
     n.visit_children_with(self);
     if self.flags.classes {
+      self.add_range(n.span());
       self.features.classes = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -159,6 +204,7 @@ impl Visit for ESC {
   fn visit_computed_prop_name(&mut self, n: &ComputedPropName) {
     n.visit_children_with(self);
     if self.flags.computed_properties {
+      self.add_range(n.span);
       self.es_versions.insert(EsVersion::Es2015, true);
       self.features.computed_properties = true;
     }
@@ -168,6 +214,7 @@ impl Visit for ESC {
   fn visit_class_prop(&mut self, n: &ClassProp) {
     n.visit_children_with(self);
     if self.flags.class_properties {
+      self.add_range(n.span);
       self.es_versions.insert(EsVersion::Es2021, true);
       self.features.class_properties = true;
     }
@@ -178,15 +225,9 @@ impl Visit for ESC {
   fn visit_prop(&mut self, n: &Prop) {
     n.visit_children_with(self);
     match n {
-      Prop::Shorthand(..) => {
+      Prop::Shorthand(..) | Prop::Method(..) => {
         if self.flags.shorthand_properties {
-          self.es_versions.insert(EsVersion::Es2015, true);
-          self.features.shorthand_properties = true;
-        }
-        return;
-      }
-      Prop::Method(..) => {
-        if self.flags.shorthand_properties {
+          self.add_range(n.span());
           self.es_versions.insert(EsVersion::Es2015, true);
           self.features.shorthand_properties = true;
         }
@@ -198,6 +239,7 @@ impl Visit for ESC {
   // /Foo\s+(\d+)/y
   fn visit_regex(&mut self, n: &Regex) {
     if n.flags.contains("y") && self.flags.sticky_regex {
+      self.add_range(n.span);
       self.features.sticky_regex = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -206,6 +248,7 @@ impl Visit for ESC {
   fn visit_tpl(&mut self, n: &Tpl) {
     n.visit_children_with(self);
     if self.flags.template_literals {
+      self.add_range(n.span);
       self.features.template_literals = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -216,12 +259,7 @@ impl Visit for ESC {
     n.visit_children_with(self);
     if self.flags.block_scoping {
       match n {
-        VarDeclKind::Const => {
-          self.features.block_scoping = true;
-          self.es_versions.insert(EsVersion::Es2015, true);
-          return;
-        }
-        VarDeclKind::Let => {
+        VarDeclKind::Const | VarDeclKind::Let => {
           self.features.block_scoping = true;
           self.es_versions.insert(EsVersion::Es2015, true);
           return;
@@ -235,6 +273,7 @@ impl Visit for ESC {
   fn visit_static_block(&mut self, n: &StaticBlock) {
     n.visit_children_with(self);
     if self.flags.class_static_block {
+      self.add_range(n.span);
       self.features.class_static_block = true;
       self.es_versions.insert(EsVersion::Es2022, true);
     }
@@ -244,6 +283,7 @@ impl Visit for ESC {
   fn visit_private_method(&mut self, n: &PrivateMethod) {
     n.visit_children_with(self);
     if self.flags.private_methods {
+      self.add_range(n.span);
       self.es_versions.insert(EsVersion::Es2022, true);
       self.features.private_methods = true;
     }
@@ -252,6 +292,7 @@ impl Visit for ESC {
   fn visit_private_prop(&mut self, n: &PrivateProp) {
     n.visit_children_with(self);
     if self.flags.private_methods {
+      self.add_range(n.span);
       self.es_versions.insert(EsVersion::Es2022, true);
       self.features.private_methods = true;
     }
@@ -261,28 +302,26 @@ impl Visit for ESC {
   fn visit_function(&mut self, n: &Function) {
     n.visit_children_with(self);
     // function a({ x, y }) {}
-    if contains_destructuring(&n.params) && !contains_object_rest(&n.params) {
+    if contains_destructuring(&n.params)
+      && !contains_object_rest(&n.params)
+      && self.flags.destructuring
+    {
+      self.add_range(n.span);
       self.features.destructuring = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
     // function a({ x, ...rest }) {}
     if contains_object_rest(&n.params) && self.flags.object_rest_spread {
+      self.add_range(n.span);
       self.features.object_rest_spread = true;
       self.es_versions.insert(EsVersion::Es2018, true);
     }
     for param in &n.params {
       match param.pat {
-        // function (x=1) {}
-        Pat::Assign(..) => {
+        // function (x=1) {} | function (...args) {}
+        Pat::Assign(..) | Pat::Rest(..) => {
           if self.flags.parameters {
-            self.es_versions.insert(EsVersion::Es2015, true);
-            self.features.parameters = true;
-          }
-          return;
-        }
-        // function (...args) {}
-        Pat::Rest(..) => {
-          if self.flags.parameters {
+            self.add_range(n.span);
             self.es_versions.insert(EsVersion::Es2015, true);
             self.features.parameters = true;
           }
@@ -292,10 +331,12 @@ impl Visit for ESC {
       }
     }
     if n.is_async && self.flags.async_to_generator {
+      self.add_range(n.span);
       self.es_versions.insert(EsVersion::Es2017, true);
       self.features.async_to_generator = true
     }
     if n.is_generator && self.flags.regenerator {
+      self.add_range(n.span);
       self.es_versions.insert(EsVersion::Es2015, true);
       self.features.regenerator = true
     }
@@ -306,12 +347,16 @@ impl Visit for ESC {
     n.visit_children_with(self);
     // async arrow function
     if n.is_async && self.flags.async_to_generator {
+      self.add_range(n.span);
       self.es_versions.insert(EsVersion::Es2017, true);
       self.features.async_to_generator = true;
     }
-    // arrow function
-    self.es_versions.insert(EsVersion::Es2015, true);
-    self.features.arrow_functions = true;
+    if self.flags.arrow_functions {
+      self.add_range(n.span);
+      // arrow function
+      self.es_versions.insert(EsVersion::Es2015, true);
+      self.features.arrow_functions = true;
+    }
   }
 
   // ??= ||= &&=
@@ -345,6 +390,7 @@ impl Visit for ESC {
       // ??
       BinaryOp::NullishCoalescing => {
         if self.flags.nullish_coalescing {
+          self.add_range(n.span);
           self.features.nullish_coalescing = true;
           self.es_versions.insert(EsVersion::Es2020, true);
         }
@@ -353,6 +399,7 @@ impl Visit for ESC {
       // **
       BinaryOp::Exp => {
         if self.flags.exponentiation_operator {
+          self.add_range(n.span);
           self.features.exponentiation_operator = true;
           self.es_versions.insert(EsVersion::Es2016, true);
         }
@@ -366,6 +413,7 @@ impl Visit for ESC {
     }) = *n.left
     {
       if is_symbol_literal(&n.right) && self.flags.typeof_symbol {
+        self.add_range(n.span);
         self.features.typeof_symbol = true;
         self.es_versions.insert(EsVersion::Es2015, true);
       }
@@ -375,6 +423,7 @@ impl Visit for ESC {
     }) = *n.right
     {
       if is_symbol_literal(&n.left) && self.flags.typeof_symbol {
+        self.add_range(n.span);
         self.features.typeof_symbol = true;
         self.es_versions.insert(EsVersion::Es2015, true);
       }
@@ -385,6 +434,7 @@ impl Visit for ESC {
   fn visit_opt_chain_expr(&mut self, n: &OptChainExpr) {
     n.visit_children_with(self);
     if self.flags.optional_chaining {
+      self.add_range(n.span);
       self.features.optional_chaining = true;
       self.es_versions.insert(EsVersion::Es2020, true);
     }
@@ -395,23 +445,37 @@ impl Visit for ESC {
   fn visit_expr_or_spread(&mut self, n: &ExprOrSpread) {
     n.visit_children_with(self);
     if n.spread.is_some() && self.flags.spread {
+      self.add_range(n.expr.span());
       self.features.spread = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
   }
 
   fn visit_var_declarators(&mut self, n: &[VarDeclarator]) {
+    let span = self.get_real_span_from_range(n[0].span, n[n.len() - 1].span);
     // const { a } = { a: 1 }
     if contains_destructuring(n) && !contains_object_rest(n) && self.flags.destructuring {
+      self.ranges.push(Range {
+        s: span.0,
+        e: span.1,
+      });
       self.features.destructuring = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
     // const { a, ...rest } = { a: 1 }
     if contains_object_rest(n) && self.flags.object_rest_spread {
+      self.ranges.push(Range {
+        s: span.0,
+        e: span.1,
+      });
       self.features.object_rest_spread = true;
       self.es_versions.insert(EsVersion::Es2018, true);
     }
     if contains_object_super(n) && self.flags.object_super {
+      self.ranges.push(Range {
+        s: span.0,
+        e: span.1,
+      });
       self.features.object_super = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -421,6 +485,7 @@ impl Visit for ESC {
   fn visit_spread_element(&mut self, n: &SpreadElement) {
     n.visit_children_with(self);
     if self.flags.object_rest_spread {
+      self.add_range(n.expr.span());
       self.features.object_rest_spread = true;
       self.es_versions.insert(EsVersion::Es2018, true);
     }
@@ -434,6 +499,7 @@ impl Visit for ESC {
       return;
     }
     if self.flags.optional_catch_binding {
+      self.add_range(cc.span);
       self.features.optional_catch_binding = true;
       self.es_versions.insert(EsVersion::Es2019, true);
     }
