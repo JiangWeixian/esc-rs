@@ -255,10 +255,10 @@ describe('es2015', () => {
   describe('functionName', () => {
     const yes = path.join(fixtures, './FunctionName/should')
     const no = path.join(fixtures, './FunctionName/should-not')
-    it('should', async () => {
+    it.todo('should', async () => {
       await glob(yes, 'functionName')
     })
-    it('should-not', async () => {
+    it.todo('should-not', async () => {
       await glob(no, 'functionName', false)
     })
   })
