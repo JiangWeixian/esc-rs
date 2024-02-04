@@ -1,5 +1,12 @@
 # esc-rs-linux-arm64-gnu
 
+## 0.1.4
+
+### Patch Changes
+
+- 02ec352: detect features above es2015
+- 02ec352: add detail with span and feature info
+
 ## 0.1.3
 
 ### Patch Changes
