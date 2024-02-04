@@ -31,7 +31,8 @@ export interface FeaturesFlag {
   optionalChaining: boolean
   optionalCatchBinding: boolean
 }
-export interface Range {
+export interface Detail {
+  feature: string
   s: number
   e: number
 }
@@ -44,6 +45,6 @@ export interface ParseOptions {
 export interface DetectResult {
   features: FeaturesFlag
   esVersions: Record<string, boolean>
-  ranges: Array<Range>
+  details: Array<Detail>
 }
 export function detect(options: ParseOptions): DetectResult

@@ -46,6 +46,7 @@
   "scripts": {
     "artifacts": "napi artifacts",
     "build": "napi build --platform --release",
+    "play": "pnpm esno ./scripts/index.js",
     "prepare": "husky install",
     "ci:publish": "pnpm changeset publish",
     "ci:version": "pnpm changeset version",
@@ -55,9 +56,7 @@
     "test": "vitest"
   },
   "lint-staged": {
-    "**/**/*.{js,ts,tsx,json,yml,yaml,md}": [
-      "eslint --fix"
-    ]
+    "**/**/*.{js,ts,tsx,json,yml,yaml,md}": ["eslint --fix"]
   },
   "optionalDependencies": {
     "@ruaaa/esc-rs-darwin-arm64": "workspace:*",

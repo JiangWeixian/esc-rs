@@ -3,7 +3,7 @@ mod esc;
 extern crate napi_derive;
 
 use anyhow::{anyhow, Context};
-use esc::{compat, FeaturesFlag, Range};
+use esc::{compat, Detail, FeaturesFlag};
 use preset_env_base::query::Query;
 use std::collections::HashMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -83,7 +83,7 @@ pub struct ParseOptions {
 pub struct DetectResult {
   pub features: FeaturesFlag,
   pub es_versions: HashMap<String, bool>,
-  pub ranges: Vec<Range>,
+  pub details: Vec<Detail>,
 }
 
 #[napi]
@@ -125,9 +125,6 @@ pub fn detect(options: ParseOptions) -> Result<DetectResult, napi::Error> {
       },
     );
     module.visit_with(&mut esc);
-    // for span in esc.spans {
-    //   println!("{}", fm.src.as_str()[span.lo.into()..span.hi.into()])
-    // }
     Ok(DetectResult {
       features: esc.features,
       es_versions: esc
@@ -135,7 +132,7 @@ pub fn detect(options: ParseOptions) -> Result<DetectResult, napi::Error> {
         .into_iter()
         .map(|(key, value)| (format!("{:?}", key), value))
         .collect::<std::collections::HashMap<String, bool>>(),
-      ranges: esc.ranges,
+      details: esc.details,
     })
   })
   .map_err(|err| napi::Error::from_reason(format!("{:?}", err)))

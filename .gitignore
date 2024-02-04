@@ -177,4 +177,3 @@ Cargo.lock
 
 # build
 *.node
-./scripts

@@ -73,7 +73,7 @@ pub fn compat(
     },
     source_file,
     source_map,
-    ranges: vec![],
+    details: vec![],
     features: FeaturesFlag::default(),
     es_versions: HashMap::new(),
   }
@@ -111,7 +111,8 @@ pub struct FeaturesFlag {
 
 #[napi(object)]
 #[derive(Debug, Clone)]
-pub struct Range {
+pub struct Detail {
+  pub feature: String,
   pub s: i32,
   pub e: i32,
 }
@@ -121,7 +122,7 @@ pub struct ESC {
   pub flags: FeaturesFlag,
   pub features: FeaturesFlag,
   pub es_versions: HashMap<EsVersion, bool>,
-  pub ranges: Vec<Range>,
+  pub details: Vec<Detail>,
   source_map: Lrc<SourceMap>,
   source_file: Lrc<SourceFile>,
 }
@@ -136,9 +137,10 @@ impl ESC {
     let real_span_hi = self.source_map.span_to_char_offset(&self.source_file, hi);
     (real_span_lo.0 as i32, real_span_hi.1 as i32)
   }
-  fn add_range(&mut self, span: Span) {
+  fn add_detail(&mut self, span: Span, feature: String) {
     let real_span = self.get_real_span(span);
-    self.ranges.push(Range {
+    self.details.push(Detail {
+      feature,
       s: real_span.0,
       e: real_span.1,
     });
@@ -174,7 +176,7 @@ impl Visit for ESC {
   fn visit_meta_prop_expr(&mut self, n: &MetaPropExpr) {
     n.visit_children_with(self);
     if self.flags.new_target {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("new_target"));
       self.features.new_target = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -184,7 +186,7 @@ impl Visit for ESC {
   fn visit_for_of_stmt(&mut self, n: &ForOfStmt) {
     n.visit_children_with(self);
     if self.flags.for_of {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("for_of"));
       self.features.for_of = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -194,7 +196,7 @@ impl Visit for ESC {
   fn visit_class_decl(&mut self, n: &ClassDecl) {
     n.visit_children_with(self);
     if self.flags.classes {
-      self.add_range(n.span());
+      self.add_detail(n.span(), String::from("classes"));
       self.features.classes = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -204,7 +206,7 @@ impl Visit for ESC {
   fn visit_computed_prop_name(&mut self, n: &ComputedPropName) {
     n.visit_children_with(self);
     if self.flags.computed_properties {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("computed_properties"));
       self.es_versions.insert(EsVersion::Es2015, true);
       self.features.computed_properties = true;
     }
@@ -214,7 +216,7 @@ impl Visit for ESC {
   fn visit_class_prop(&mut self, n: &ClassProp) {
     n.visit_children_with(self);
     if self.flags.class_properties {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("class_properties"));
       self.es_versions.insert(EsVersion::Es2021, true);
       self.features.class_properties = true;
     }
@@ -227,7 +229,7 @@ impl Visit for ESC {
     match n {
       Prop::Shorthand(..) | Prop::Method(..) => {
         if self.flags.shorthand_properties {
-          self.add_range(n.span());
+          self.add_detail(n.span(), String::from("shorthand_properties"));
           self.es_versions.insert(EsVersion::Es2015, true);
           self.features.shorthand_properties = true;
         }
@@ -239,7 +241,7 @@ impl Visit for ESC {
   // /Foo\s+(\d+)/y
   fn visit_regex(&mut self, n: &Regex) {
     if n.flags.contains("y") && self.flags.sticky_regex {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("sticky_regex"));
       self.features.sticky_regex = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -248,7 +250,7 @@ impl Visit for ESC {
   fn visit_tpl(&mut self, n: &Tpl) {
     n.visit_children_with(self);
     if self.flags.template_literals {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("template_literals"));
       self.features.template_literals = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -257,15 +259,15 @@ impl Visit for ESC {
   // const let
   fn visit_var_decl_kind(&mut self, n: &VarDeclKind) {
     n.visit_children_with(self);
-    if self.flags.block_scoping {
-      match n {
-        VarDeclKind::Const | VarDeclKind::Let => {
+    match n {
+      VarDeclKind::Const | VarDeclKind::Let => {
+        if self.flags.block_scoping {
           self.features.block_scoping = true;
           self.es_versions.insert(EsVersion::Es2015, true);
-          return;
         }
-        _ => (),
+        return;
       }
+      _ => (),
     }
   }
 
@@ -273,7 +275,7 @@ impl Visit for ESC {
   fn visit_static_block(&mut self, n: &StaticBlock) {
     n.visit_children_with(self);
     if self.flags.class_static_block {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("class_static_block"));
       self.features.class_static_block = true;
       self.es_versions.insert(EsVersion::Es2022, true);
     }
@@ -283,7 +285,7 @@ impl Visit for ESC {
   fn visit_private_method(&mut self, n: &PrivateMethod) {
     n.visit_children_with(self);
     if self.flags.private_methods {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("private_methods"));
       self.es_versions.insert(EsVersion::Es2022, true);
       self.features.private_methods = true;
     }
@@ -292,7 +294,7 @@ impl Visit for ESC {
   fn visit_private_prop(&mut self, n: &PrivateProp) {
     n.visit_children_with(self);
     if self.flags.private_methods {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("private_methods"));
       self.es_versions.insert(EsVersion::Es2022, true);
       self.features.private_methods = true;
     }
@@ -306,13 +308,13 @@ impl Visit for ESC {
       && !contains_object_rest(&n.params)
       && self.flags.destructuring
     {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("destructuring"));
       self.features.destructuring = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
     // function a({ x, ...rest }) {}
     if contains_object_rest(&n.params) && self.flags.object_rest_spread {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("object_rest_spread"));
       self.features.object_rest_spread = true;
       self.es_versions.insert(EsVersion::Es2018, true);
     }
@@ -321,7 +323,7 @@ impl Visit for ESC {
         // function (x=1) {} | function (...args) {}
         Pat::Assign(..) | Pat::Rest(..) => {
           if self.flags.parameters {
-            self.add_range(n.span);
+            self.add_detail(n.span, String::from("parameters"));
             self.es_versions.insert(EsVersion::Es2015, true);
             self.features.parameters = true;
           }
@@ -331,12 +333,12 @@ impl Visit for ESC {
       }
     }
     if n.is_async && self.flags.async_to_generator {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("async_to_generator"));
       self.es_versions.insert(EsVersion::Es2017, true);
       self.features.async_to_generator = true
     }
     if n.is_generator && self.flags.regenerator {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("regenerator"));
       self.es_versions.insert(EsVersion::Es2015, true);
       self.features.regenerator = true
     }
@@ -347,18 +349,19 @@ impl Visit for ESC {
     n.visit_children_with(self);
     // async arrow function
     if n.is_async && self.flags.async_to_generator {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("async_to_generator"));
       self.es_versions.insert(EsVersion::Es2017, true);
       self.features.async_to_generator = true;
     }
     if self.flags.arrow_functions {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("arrow_functions"));
       // arrow function
       self.es_versions.insert(EsVersion::Es2015, true);
       self.features.arrow_functions = true;
     }
   }
 
+  // No span info here
   // ??= ||= &&=
   fn visit_assign_op(&mut self, n: &AssignOp) {
     n.visit_children_with(self);
@@ -390,7 +393,7 @@ impl Visit for ESC {
       // ??
       BinaryOp::NullishCoalescing => {
         if self.flags.nullish_coalescing {
-          self.add_range(n.span);
+          self.add_detail(n.span, String::from("nullish_coalescing"));
           self.features.nullish_coalescing = true;
           self.es_versions.insert(EsVersion::Es2020, true);
         }
@@ -399,7 +402,7 @@ impl Visit for ESC {
       // **
       BinaryOp::Exp => {
         if self.flags.exponentiation_operator {
-          self.add_range(n.span);
+          self.add_detail(n.span, String::from("exponentiation_operator"));
           self.features.exponentiation_operator = true;
           self.es_versions.insert(EsVersion::Es2016, true);
         }
@@ -413,7 +416,7 @@ impl Visit for ESC {
     }) = *n.left
     {
       if is_symbol_literal(&n.right) && self.flags.typeof_symbol {
-        self.add_range(n.span);
+        self.add_detail(n.span, String::from("typeof_symbol"));
         self.features.typeof_symbol = true;
         self.es_versions.insert(EsVersion::Es2015, true);
       }
@@ -423,7 +426,7 @@ impl Visit for ESC {
     }) = *n.right
     {
       if is_symbol_literal(&n.left) && self.flags.typeof_symbol {
-        self.add_range(n.span);
+        self.add_detail(n.span, String::from("typeof_symbol"));
         self.features.typeof_symbol = true;
         self.es_versions.insert(EsVersion::Es2015, true);
       }
@@ -434,7 +437,7 @@ impl Visit for ESC {
   fn visit_opt_chain_expr(&mut self, n: &OptChainExpr) {
     n.visit_children_with(self);
     if self.flags.optional_chaining {
-      self.add_range(n.span);
+      self.add_detail(n.span, String::from("optional_chaining"));
       self.features.optional_chaining = true;
       self.es_versions.insert(EsVersion::Es2020, true);
     }
@@ -445,7 +448,7 @@ impl Visit for ESC {
   fn visit_expr_or_spread(&mut self, n: &ExprOrSpread) {
     n.visit_children_with(self);
     if n.spread.is_some() && self.flags.spread {
-      self.add_range(n.expr.span());
+      self.add_detail(n.expr.span(), String::from("spread"));
       self.features.spread = true;
       self.es_versions.insert(EsVersion::Es2015, true);
     }
@@ -455,7 +458,8 @@ impl Visit for ESC {
     let span = self.get_real_span_from_range(n[0].span, n[n.len() - 1].span);
     // const { a } = { a: 1 }
     if contains_destructuring(n) && !contains_object_rest(n) && self.flags.destructuring {
-      self.ranges.push(Range {
+      self.details.push(Detail {
+        feature: String::from("destructuring"),
         s: span.0,
         e: span.1,
       });
@@ -464,7 +468,8 @@ impl Visit for ESC {
     }
     // const { a, ...rest } = { a: 1 }
     if contains_object_rest(n) && self.flags.object_rest_spread {
-      self.ranges.push(Range {
+      self.details.push(Detail {
+        feature: String::from("object_rest_spread"),
         s: span.0,
         e: span.1,
       });
@@ -472,7 +477,8 @@ impl Visit for ESC {
       self.es_versions.insert(EsVersion::Es2018, true);
     }
     if contains_object_super(n) && self.flags.object_super {
-      self.ranges.push(Range {
+      self.details.push(Detail {
+        feature: String::from("object_super"),
         s: span.0,
         e: span.1,
       });
@@ -485,7 +491,7 @@ impl Visit for ESC {
   fn visit_spread_element(&mut self, n: &SpreadElement) {
     n.visit_children_with(self);
     if self.flags.object_rest_spread {
-      self.add_range(n.expr.span());
+      self.add_detail(n.expr.span(), String::from("object_rest_spread"));
       self.features.object_rest_spread = true;
       self.es_versions.insert(EsVersion::Es2018, true);
     }
@@ -499,7 +505,7 @@ impl Visit for ESC {
       return;
     }
     if self.flags.optional_catch_binding {
-      self.add_range(cc.span);
+      self.add_detail(cc.span, String::from("optional_catch_binding"));
       self.features.optional_catch_binding = true;
       self.es_versions.insert(EsVersion::Es2019, true);
     }

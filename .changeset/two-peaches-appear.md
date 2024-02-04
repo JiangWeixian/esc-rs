@@ -10,4 +10,4 @@
 "@ruaaa/esc-rs-win32-x64-msvc": patch
 ---
 
-add ranges
+add detail with span and feature info
