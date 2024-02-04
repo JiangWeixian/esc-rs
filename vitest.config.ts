@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config'
 
 const config = defineConfig({
   test: {
-    watch: !process.env.CI,
+    watch: !process.env.CI_TEST,
   },
 })
 
