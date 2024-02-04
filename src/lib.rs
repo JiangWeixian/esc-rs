@@ -3,7 +3,7 @@ mod esc;
 extern crate napi_derive;
 
 use anyhow::{anyhow, Context};
-use esc::{compat, FeaturesFlag};
+use esc::{compat, Detail, FeaturesFlag};
 use preset_env_base::query::Query;
 use std::collections::HashMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -12,7 +12,7 @@ use swc_core::common::comments::SingleThreadedComments;
 use swc_core::common::errors::Handler;
 use swc_core::common::{sync::Lrc, FileName, SourceMap, GLOBALS};
 use swc_core::ecma::ast::EsVersion;
-use swc_core::ecma::visit::VisitMutWith;
+use swc_core::ecma::visit::VisitWith;
 use swc_ecma_parser::Syntax;
 use swc_ecma_preset_env::{Config, Targets};
 use swc_error_reporters::handler::{try_with_handler, HandlerOpts};
@@ -82,8 +82,8 @@ pub struct ParseOptions {
 #[derive(Debug, Clone)]
 pub struct DetectResult {
   pub features: FeaturesFlag,
-  #[napi(object)]
   pub es_versions: HashMap<String, bool>,
+  pub details: Vec<Detail>,
 }
 
 #[napi]
@@ -102,9 +102,9 @@ pub fn detect(options: ParseOptions) -> Result<DetectResult, napi::Error> {
 
   try_with(cm.clone(), false, |handler| {
     let comments = SingleThreadedComments::default();
-    let mut module = parse_js(
-      cm,
-      fm,
+    let module = parse_js(
+      cm.clone(),
+      fm.clone(),
       &handler,
       EsVersion::EsNext,
       Syntax::Es(Default::default()),
@@ -114,13 +114,17 @@ pub fn detect(options: ParseOptions) -> Result<DetectResult, napi::Error> {
     .context("failed to parse code")?;
     let mut esc = compat(
       es_version,
+      cm,
+      fm,
       Config {
         targets: Some(env_targets),
         mode: None,
+        // https://github.com/babel/babel/issues/16254
+        bugfixes: true,
         ..Default::default()
       },
     );
-    module.visit_mut_with(&mut esc);
+    module.visit_with(&mut esc);
     Ok(DetectResult {
       features: esc.features,
       es_versions: esc
@@ -128,6 +132,7 @@ pub fn detect(options: ParseOptions) -> Result<DetectResult, napi::Error> {
         .into_iter()
         .map(|(key, value)| (format!("{:?}", key), value))
         .collect::<std::collections::HashMap<String, bool>>(),
+      details: esc.details,
     })
   })
   .map_err(|err| napi::Error::from_reason(format!("{:?}", err)))

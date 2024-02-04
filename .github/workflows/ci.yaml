@@ -4,6 +4,7 @@ env:
   DEBUG: "napi:*"
   APP_NAME: esc-rs
   MACOSX_DEPLOYMENT_TARGET: "10.13"
+  CI_TEST: 1
 
 on:
   push:
