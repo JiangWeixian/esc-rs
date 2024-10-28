@@ -120,14 +120,15 @@ pub struct Line {
 #[derive(Debug, Clone)]
 pub struct Detail {
   pub feature: String,
+  // start offset
   pub s: i32,
+  // end offset
   pub e: i32,
   // start line and col
   pub ls: Line,
   // end line and col
   pub le: Line,
 }
-
 
 #[derive(Clone)]
 pub struct ESC {
@@ -152,12 +153,30 @@ impl ESC {
   fn get_real_loc(&self, span: Span) -> (Line, Line) {
     let line_lo = self.source_map.lookup_char_pos(span.lo());
     let line_hi = self.source_map.lookup_char_pos(span.hi());
-    (Line { l: line_lo.line as i32, c: line_lo.col.0 as i32 }, Line { l: line_hi.line as i32, c: line_hi.col.0 as i32 })
+    (
+      Line {
+        l: line_lo.line as i32,
+        c: line_lo.col.0 as i32,
+      },
+      Line {
+        l: line_hi.line as i32,
+        c: line_hi.col.0 as i32,
+      },
+    )
   }
   fn get_real_loc_from_range(&self, lo: Span, hi: Span) -> (Line, Line) {
     let line_lo = self.source_map.lookup_char_pos(lo.lo());
     let line_hi = self.source_map.lookup_char_pos(hi.hi());
-    (Line { l: line_lo.line as i32, c: line_lo.col.0 as i32 }, Line { l: line_hi.line as i32, c: line_hi.col.0 as i32 })
+    (
+      Line {
+        l: line_lo.line as i32,
+        c: line_lo.col.0 as i32,
+      },
+      Line {
+        l: line_hi.line as i32,
+        c: line_hi.col.0 as i32,
+      },
+    )
   }
   fn add_detail(&mut self, span: Span, feature: String) {
     let real_span = self.get_real_span(span);
