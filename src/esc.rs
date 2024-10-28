@@ -110,12 +110,24 @@ pub struct FeaturesFlag {
 }
 
 #[napi(object)]
+#[derive(Debug, Clone, Copy)]
+pub struct Line {
+  pub l: i32,
+  pub c: i32,
+}
+
+#[napi(object)]
 #[derive(Debug, Clone)]
 pub struct Detail {
   pub feature: String,
   pub s: i32,
   pub e: i32,
+  // start line and col
+  pub ls: Line,
+  // end line and col
+  pub le: Line,
 }
+
 
 #[derive(Clone)]
 pub struct ESC {
@@ -137,12 +149,25 @@ impl ESC {
     let real_span_hi = self.source_map.span_to_char_offset(&self.source_file, hi);
     (real_span_lo.0 as i32, real_span_hi.1 as i32)
   }
+  fn get_real_loc(&self, span: Span) -> (Line, Line) {
+    let line_lo = self.source_map.lookup_char_pos(span.lo());
+    let line_hi = self.source_map.lookup_char_pos(span.hi());
+    (Line { l: line_lo.line as i32, c: line_lo.col.0 as i32 }, Line { l: line_hi.line as i32, c: line_hi.col.0 as i32 })
+  }
+  fn get_real_loc_from_range(&self, lo: Span, hi: Span) -> (Line, Line) {
+    let line_lo = self.source_map.lookup_char_pos(lo.lo());
+    let line_hi = self.source_map.lookup_char_pos(hi.hi());
+    (Line { l: line_lo.line as i32, c: line_lo.col.0 as i32 }, Line { l: line_hi.line as i32, c: line_hi.col.0 as i32 })
+  }
   fn add_detail(&mut self, span: Span, feature: String) {
     let real_span = self.get_real_span(span);
+    let loc = self.get_real_loc(span);
     self.details.push(Detail {
       feature,
       s: real_span.0,
       e: real_span.1,
+      ls: loc.0,
+      le: loc.1,
     });
   }
 }
@@ -456,12 +481,15 @@ impl Visit for ESC {
 
   fn visit_var_declarators(&mut self, n: &[VarDeclarator]) {
     let span = self.get_real_span_from_range(n[0].span, n[n.len() - 1].span);
+    let loc = self.get_real_loc_from_range(n[0].span, n[n.len() - 1].span);
     // const { a } = { a: 1 }
     if contains_destructuring(n) && !contains_object_rest(n) && self.flags.destructuring {
       self.details.push(Detail {
         feature: String::from("destructuring"),
         s: span.0,
         e: span.1,
+        ls: loc.0,
+        le: loc.1,
       });
       self.features.destructuring = true;
       self.es_versions.insert(EsVersion::Es2015, true);
@@ -472,6 +500,8 @@ impl Visit for ESC {
         feature: String::from("object_rest_spread"),
         s: span.0,
         e: span.1,
+        ls: loc.0,
+        le: loc.1,
       });
       self.features.object_rest_spread = true;
       self.es_versions.insert(EsVersion::Es2018, true);
@@ -481,6 +511,8 @@ impl Visit for ESC {
         feature: String::from("object_super"),
         s: span.0,
         e: span.1,
+        ls: loc.0,
+        le: loc.1,
       });
       self.features.object_super = true;
       self.es_versions.insert(EsVersion::Es2015, true);
