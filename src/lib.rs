@@ -3,9 +3,11 @@ mod esc;
 extern crate napi_derive;
 
 use anyhow::{anyhow, Context};
-use esc::{compat, Detail, FeaturesFlag};
+use esc::{compat, Detail, FeaturesFlag, Line};
 use preset_env_base::query::Query;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use swc_compiler_base::{parse_js, IsModule};
 use swc_core::common::comments::SingleThreadedComments;
@@ -16,6 +18,7 @@ use swc_core::ecma::visit::VisitWith;
 use swc_ecma_parser::Syntax;
 use swc_ecma_preset_env::{Config, Targets};
 use swc_error_reporters::handler::{try_with_handler, HandlerOpts};
+use sourcemap::SourceMap as RawSourceMap;
 
 fn try_with<F, Ret>(cm: Lrc<SourceMap>, skip_filename: bool, op: F) -> Result<Ret, anyhow::Error>
 where
@@ -136,4 +139,65 @@ pub fn detect(options: ParseOptions) -> Result<DetectResult, napi::Error> {
     })
   })
   .map_err(|err| napi::Error::from_reason(format!("{:?}", err)))
+}
+
+#[napi(object)]
+#[derive(Debug, Clone)]
+pub struct LookupOptions {
+  pub filename: String,
+  pub details: Vec<Detail>,
+}
+
+#[napi(object)]
+#[derive(Debug, Clone)]
+pub struct LookupResult {
+  pub ls: Option<Line>,
+  pub le: Option<Line>,
+  pub source: Option<String>
+}
+
+#[napi]
+pub fn lookup(options: LookupOptions) -> Result<Vec<LookupResult>, napi::Error> {
+  let mut file = File::open(options.filename).expect("TODO");
+  let mut source_map_content = String::new();
+  file.read_to_string(&mut source_map_content).expect("TODO");
+  let smc = RawSourceMap::from_slice(source_map_content.as_bytes()).expect("TODO");
+  
+  let mut result: Vec<LookupResult> = vec![];
+  let mut source: Option<String> = Default::default();
+  for generated_loc in options.details {
+    let line_lo = generated_loc.ls.l;
+    let col_lo = generated_loc.ls.c;
+    let line_hi = generated_loc.le.l;
+    let col_hi = generated_loc.le.c;
+    let original_loc_lo: Option<Line> = match smc.lookup_token(line_lo as u32, col_lo as u32) {
+      Some(token) => {
+        source = token.get_source().map(|f| f.to_string());
+        let loc = Line {
+          l: token.get_src_line() as i32,
+          c: token.get_src_col() as i32,
+        };
+        Some(loc)
+      },
+      None => None
+    };
+    let original_loc_hi: Option<Line> = match smc.lookup_token(line_hi as u32, col_hi as u32) {
+      Some(token) => {
+        source = token.get_source().map(|f| f.to_string());
+        let loc = Line {
+          l: token.get_src_line() as i32,
+          c: token.get_src_col() as i32,
+        };
+        Some(loc)
+      },
+      None => None
+    };
+    let original_loc = LookupResult {
+      ls: original_loc_lo,
+      le: original_loc_hi,
+      source: source.clone(),
+    };
+    result.push(original_loc);
+  }
+  Ok(result)
 }

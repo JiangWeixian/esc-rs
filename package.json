@@ -79,6 +79,7 @@
     "fast-glob": "^3.3.2",
     "husky": "8.0.3",
     "lint-staged": "^11.2.6",
+    "source-map-js": "1.2.1",
     "vitest": "^1.2.1"
   },
   "config": {

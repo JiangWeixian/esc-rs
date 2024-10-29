@@ -18,6 +18,7 @@ swc_ecma_preset_env="0.205.1"
 anyhow="1.0.79"
 napi = { version = "2.12.2", default-features = false, features = ["napi4"] }
 napi-derive = "2.12.2"
+sourcemap = "9.0.0"
 
 [build-dependencies]
 napi-build = "2.0.1"
