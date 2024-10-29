@@ -1,5 +1,11 @@
 # esc-rs-darwin-arm64
 
+## 0.2.0
+
+### Minor Changes
+
+- 36bfe42: support loc info and lookup original line and col info
+
 ## 0.1.4
 
 ### Patch Changes
