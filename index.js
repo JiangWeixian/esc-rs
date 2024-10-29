@@ -295,6 +295,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { detect } = nativeBinding
+const { detect, lookup } = nativeBinding
 
 module.exports.detect = detect
+module.exports.lookup = lookup

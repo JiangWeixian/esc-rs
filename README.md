@@ -1,9 +1,9 @@
 # esc-rs
 
-> [!WARNING]  
+> [!WARNING]
 > Based on swc which use [compat-data](https://github.com/babel/babel/blob/main/packages/babel-compat-data/data/plugins.json) from babel, maybe not as same as [caniuse](https://caniuse.com/), check this [issue](https://github.com/babel/babel/issues/16254#event-11678932441) for more details.
 
-# usage
+## usage
 
 ```console
 pnpm i esc-rs -D
@@ -29,9 +29,9 @@ const result = detect({
 // }
 ```
 
-Will output `<feature>: true` if `<feature>` not support in current `browserslist`. 
+Will output `<feature>: true` if `<feature>` not support in current `browserslist`.
 
-If want to report detail line-col info 
+If want to report code frame info
 
 ```tsx
 const result = detect({
@@ -44,5 +44,42 @@ for (const detail of result.details) {
 }
 ```
 
-> [!WARNING]  
+## `detect`
+
+### options
+
+- `filename`: string
+- `code`: string
+- `browserslist`: string
+
+### output
+
+#### `output.details`
+
+- `feature`: not support feature-name based on current `browserlists`. e.g. `nullishCoalescing`
+- `s`: start char pos
+- `e`: end char pos
+- `ls`: start loc
+- `le`: end loc
+
+## lookup
+
+### options
+> **unstable**. Currently `details.{feature|s|e}` is required.
+
+- `filename`: string
+- `details`
+  - `feature`: not support feature-name based on current `browserlists`. e.g. `nullishCoalescing`
+  - `s`: start char pos
+  - `e`: end char pos
+  - `ls`: start loc
+  - `le`: end loc
+
+### output
+
+- `ls`: start loc
+- `le`: end loc
+- `source`: original filename
+
+> [!WARNING]
 > Currently unable to check polyfill features, e.g. `Async iterators`. In swc it will inject `core-js` polyfills instead of transform

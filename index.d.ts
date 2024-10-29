@@ -31,10 +31,16 @@ export interface FeaturesFlag {
   optionalChaining: boolean
   optionalCatchBinding: boolean
 }
+export interface Line {
+  l: number
+  c: number
+}
 export interface Detail {
   feature: string
   s: number
   e: number
+  ls: Line
+  le: Line
 }
 export interface ParseOptions {
   target?: string
@@ -48,3 +54,13 @@ export interface DetectResult {
   details: Array<Detail>
 }
 export function detect(options: ParseOptions): DetectResult
+export interface LookupOptions {
+  filename: string
+  details: Array<Detail>
+}
+export interface LookupResult {
+  ls?: Line
+  le?: Line
+  source?: string
+}
+export function lookup(options: LookupOptions): Array<LookupResult>

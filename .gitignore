@@ -177,3 +177,6 @@ Cargo.lock
 
 # build
 *.node
+
+# fixtures
+tests/fixtures/source-maps
