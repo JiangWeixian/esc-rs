@@ -1,6 +1,6 @@
 {
   "name": "@ruaaa/esc-rs-darwin-x64",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "os": ["darwin"],
   "cpu": ["x64"],
   "license": "MIT",

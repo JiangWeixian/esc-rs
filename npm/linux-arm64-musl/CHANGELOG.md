@@ -1,5 +1,11 @@
 # esc-rs-linux-arm64-musl
 
+## 0.2.0
+
+### Minor Changes
+
+- f492e48: support loc info and lookup original line and col info
+
 ## 0.1.4
 
 ### Patch Changes
